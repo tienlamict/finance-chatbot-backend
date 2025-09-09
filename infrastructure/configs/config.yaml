@@ -8,5 +8,4 @@ database:
   password: "mysecretpassword"
   host: "127.0.0.1"
   port: "3309"
-  dbname: "tracibility_db"
-  #dbname: "block_trace_db"
+  dbname: "finance_user_db"
