@@ -1,7 +1,7 @@
-package configs
+package infrastructure
 
 import (
-	db "finance-chatbot/internal/database"
+	db "finance-chatbot/infrastructure/database"
 	"log"
 
 	"github.com/spf13/viper"
