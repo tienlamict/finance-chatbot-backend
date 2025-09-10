@@ -8,6 +8,7 @@ import (
 	"finance-chatbot/addon/component/jwtc"
 	sctx "finance-chatbot/addon/sctx"
 	"finance-chatbot/composer"
+	"finance-chatbot/middleware"
 	"finance-chatbot/proto/pb"
 	"fmt"
 	"log"
