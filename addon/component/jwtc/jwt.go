@@ -2,7 +2,7 @@ package jwtc
 
 import (
 	"context"
-	sctx "finance-chatbot/common"
+	sctx "finance-chatbot/addon/sctx"
 	"flag"
 	"fmt"
 	"time"

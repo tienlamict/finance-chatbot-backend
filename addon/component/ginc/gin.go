@@ -1,7 +1,7 @@
 package ginc
 
 import (
-	sctx "finance-chatbot/common"
+	sctx "finance-chatbot/addon/sctx"
 	"flag"
 
 	"github.com/gin-gonic/gin"

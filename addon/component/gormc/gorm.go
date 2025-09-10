@@ -1,8 +1,8 @@
 package gormc
 
 import (
-	sctx "finance-chatbot/common"
-	"finance-chatbot/common/component/gormc/dialets"
+	"finance-chatbot/addon/component/gormc/dialets"
+	sctx "finance-chatbot/addon/sctx"
 	"flag"
 	"fmt"
 	"strings"

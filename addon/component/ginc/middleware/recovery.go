@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	sctx "finance-chatbot/common"
+	sctx "finance-chatbot/addon/sctx"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
