@@ -2,7 +2,7 @@ package mysql
 
 import (
 	"context"
-	core "finance-chatbot/common"
+	core "finance-chatbot/addon/core"
 	"finance-chatbot/microservice/auth/entity"
 
 	"github.com/pkg/errors"

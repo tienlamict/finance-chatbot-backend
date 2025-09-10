@@ -1,12 +1,14 @@
-package common
+// Source code from https://github.com/ory/herodot
+// gRPC codes was removed to keep this simple and only use for HTTP API
+
+package core
 
 import (
 	stderr "errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"net/http"
-
-	"github.com/pkg/errors"
 )
 
 type DefaultError struct {
