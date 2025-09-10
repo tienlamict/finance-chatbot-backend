@@ -7,5 +7,5 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o demo_app .
 
 FROM alpine
 WORKDIR /app/
-COPY --from=builder /app/demo_app .
-ENTRYPOINT ["./demo_app"]
+COPY --from=builder /app/chatbot_app .
+ENTRYPOINT ["./chatbot_app"]
