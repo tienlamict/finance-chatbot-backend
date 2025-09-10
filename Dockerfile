@@ -1,9 +1,9 @@
-FROM golang:1.19-alpine as builder
+FROM golang:1.24.2-alpine AS builder
 
 RUN mkdir /app
 ADD . /app/
 WORKDIR /app
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o demo_app .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o chatbot_app .
 
 FROM alpine
 WORKDIR /app/
