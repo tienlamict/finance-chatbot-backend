@@ -1,0 +1,28 @@
+package entity
+
+import "time"
+
+type Role string
+
+const (
+	RoleUser      Role = "user"
+	RoleAssistant Role = "assistant"
+)
+
+type ChatMessage struct {
+	ID        string    `json:"id" gorm:"column:id;primaryKey"`
+	UserID    string    `json:"user_id" gorm:"column:user_id;index"`
+	Role      Role      `json:"role" gorm:"column:role;type:enum('user','assistant')"`
+	Content   string    `json:"content" gorm:"column:content;type:text"`
+	CreatedAt time.Time `json:"created_at" gorm:"column:created_at;autoCreateTime"`
+}
+
+type ChatRepository interface {
+	Create(msg *ChatMessage) error
+	ListByUser(userID string, limit int) ([]ChatMessage, error)
+}
+
+type AIClient interface {
+	GenerateReply(userID string, history []ChatMessage, prompt string) (string, error)
+	Close() error
+}
