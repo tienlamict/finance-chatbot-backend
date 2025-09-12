@@ -74,6 +74,7 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 	userAPIService := composer.ComposeUserAPIService(serviceCtx)
 	taskAPIService := composer.ComposeTaskAPIService(serviceCtx)
 	authAPIService := composer.ComposeAuthAPIService(serviceCtx)
+	//chatbotService:= composer.
 
 	requireAuthMdw := middleware.RequireAuth(composer.ComposeAuthRPCClient(serviceCtx))
 

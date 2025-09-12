@@ -3,7 +3,6 @@ package composer
 import (
 	"finance-chatbot/addon/common"
 	authBusiness "finance-chatbot/microservice/auth/business"
-	"finance-chatbot/microservice/auth/entity"
 	authSQLRepository "finance-chatbot/microservice/auth/repository/mysql"
 	authUserRPC "finance-chatbot/microservice/auth/repository/rpc"
 	authAPI "finance-chatbot/microservice/auth/transport/api"
@@ -18,9 +17,6 @@ import (
 	userSQLRepository "finance-chatbot/microservice/user/repository/mysql"
 	userApi "finance-chatbot/microservice/user/transport/api"
 	userRPC "finance-chatbot/microservice/user/transport/rpc"
-
-	chatbotBusiness "finance-chatbot/microservice/chatbot/business"
-	chatbotSQLRepository "finance-chatbot/microservice/chatbot/repository/mysql"
 
 	"github.com/gin-gonic/gin"
 
@@ -59,14 +55,6 @@ func ComposeUserAPIService(serviceCtx sctx.ServiceContext) UserService {
 	userService := userApi.NewAPI(biz)
 
 	return userService
-}
-
-func ComposeChatbotAPIService(serviceCtx sctx.ServiceContext, aiClient entity.AIClient) ChatbotService{
-	db:=serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
-
-	chatbotRepo := chatbotSQLRepository.NewMySQLRepository(db.GetDB())
-	biz:= chatbotBusiness.NewChatBusiness(chatbotRepo, aiClient)
-	chatbotAPI := 
 }
 
 func ComposeTaskAPIService(serviceCtx sctx.ServiceContext) TaskService {
