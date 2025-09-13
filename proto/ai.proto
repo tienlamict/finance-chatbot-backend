@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "pb/";
+
+message ChatItem {
+  string role = 1;      
+  string content = 2;   
+  int64  timestamp = 3;
+}
+
+message GenerateReplyRequest {
+  string user_id = 1;
+  string prompt  = 2;
+  repeated ChatItem history = 3; 
+}
+
+message GenerateReplyResponse {
+  string reply = 1;
+}
+
+service AIService {
+  rpc GenerateReply(GenerateReplyRequest) returns (GenerateReplyResponse);
+}
