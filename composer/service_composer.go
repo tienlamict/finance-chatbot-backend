@@ -18,8 +18,10 @@ import (
 	userApi "finance-chatbot/microservice/user/transport/api"
 	userRPC "finance-chatbot/microservice/user/transport/rpc"
 
-	chatBusiness "finance-chatbot/microservice/chatbot/business"
-	chatSQLRepository "finance-chatbot/microservice/chatbot/repository/mysql"
+	chatBiz "finance-chatbot/microservice/chatbot/business"
+	"finance-chatbot/microservice/chatbot/entity"
+	chatRepo "finance-chatbot/microservice/chatbot/repository/mysql"
+	chatRPCClient "finance-chatbot/microservice/chatbot/repository/rpc"
 	chatAPI "finance-chatbot/microservice/chatbot/transport/api"
 
 	"github.com/gin-gonic/gin"
@@ -72,15 +74,26 @@ func ComposeTaskAPIService(serviceCtx sctx.ServiceContext) TaskService {
 	return serviceAPI
 }
 
-func ComposeChatbotAPIService(serviceCtx sctx.ServiceContext) ChatbotService {
+func ComposeChatAPIService(serviceCtx sctx.ServiceContext) *chatAPI.ChatAPI {
 	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
 
-	userClient := taskUserRPC.NewClient(composeUserRPCClient(serviceCtx))
-	chatRepo := chatSQLRepository.NewMySQLRepository(db.GetDB())
-	biz := chatBusiness.NewChatBusiness(chatRepo, userClient)
-	chatServiceAPI := chatAPI.NewAPI(biz)
+	// Lấy/khởi tạo gRPC client
+	var ai entity.AIClient
+	if v, ok := serviceCtx.Get(common.KeyCompAIClient); ok {
+		ai = v.(entity.AIClient)
+	} else {
+		cfg := serviceCtx.MustGet(common.KeyCompConf).(common.Config)
+		addr := cfg.GetAIAddress()
+		cli, err := chatRPCClient.NewAIClient(addr)
+		if err != nil {
+			panic(err)
+		}
+		ai = cli
+	}
 
-	return chatServiceAPI
+	repo := chatRepo.NewMySQLRepository(db.GetDB())
+	uc := chatBiz.NewChatBusiness(repo, ai)
+	return chatAPI.NewAPI(uc)
 }
 
 func ComposeAuthAPIService(serviceCtx sctx.ServiceContext) AuthService {

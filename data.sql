@@ -30,3 +30,11 @@ CREATE TABLE `users` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `chat_messages` (
+    `id`        VARCHAR(36) PRIMARY KEY,
+    `user_id`   VARCHAR(50) NOT NULL,
+    `role`      ENUM('user','assistant') NOT NULL,
+    `content`   TEXT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

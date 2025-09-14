@@ -1,9 +1,6 @@
 package business
 
 import (
-	"errors"
-	"strings"
-
 	"finance-chatbot/microservice/chatbot/entity"
 )
 
@@ -17,25 +14,19 @@ func NewChatBusiness(repo entity.ChatRepository, aiClient entity.AIClient) *Chat
 }
 
 func (uc *ChatUsecase) SendMessage(userID, prompt string) (assistantMsg entity.ChatMessage, err error) {
-	prompt = strings.TrimSpace(prompt)
-	if userID == "" || prompt == "" {
-		return assistantMsg, errors.New("user_id and prompt required")
-	}
-
-	// persist user message
+	// 1. Trim và validate input
+	// 2. Persist user message vào DB qua repo
 	if err = uc.repo.Create(&entity.ChatMessage{UserID: userID, Role: entity.RoleUser, Content: prompt}); err != nil {
 		return
 	}
 
-	// load short history (last 20, newest first)
+	// 3. Lấy short history (last 20)
 	history, _ := uc.repo.ListByUser(userID, 20)
 
-	// ask AI via gRPC
+	// 4. Gọi AIClient.GenerateReply (gRPC call sang AI service)
 	reply, err := uc.aiClient.GenerateReply(userID, history, prompt)
-	if err != nil {
-		return
-	}
 
+	// 5. Persist assistant reply vào DB
 	assistantMsg = entity.ChatMessage{UserID: userID, Role: entity.RoleAssistant, Content: reply}
 	err = uc.repo.Create(&assistantMsg)
 	return

@@ -9,6 +9,7 @@ import (
 type config struct {
 	grpcPort          int    // for server port listening
 	grpcServerAddress string // for client make grpc client connection
+	aiAddress         string
 }
 
 func NewConfig() *config {
@@ -50,3 +51,5 @@ func (c *config) GetGRPCPort() int {
 func (c *config) GetGRPCServerAddress() string {
 	return c.grpcServerAddress
 }
+
+func (c *config) GetAIAddress() string { return c.aiAddress }
