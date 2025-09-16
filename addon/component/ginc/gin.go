@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	defaultPort = 3000
+	defaultPort = 3001
 	defaultMode = "debug"
 )
 
@@ -55,7 +55,7 @@ func (gs *ginEngine) Stop() error {
 }
 
 func (gs *ginEngine) InitFlags() {
-	flag.IntVar(&gs.Config.port, "gin-port", defaultPort, "gin server port. Default 3000")
+	flag.IntVar(&gs.Config.port, "gin-port", defaultPort, "gin server port. Default 3001")
 	flag.StringVar(&gs.Config.ginMode, "gin-mode", defaultMode, "gin mode (debug | release). Default debug")
 }
 

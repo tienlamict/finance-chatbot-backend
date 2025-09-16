@@ -14,8 +14,8 @@ type ChatAPI struct{ uc *business.ChatUsecase }
 func NewAPI(uc *business.ChatUsecase) *ChatAPI { return &ChatAPI{uc: uc} }
 
 func (a *ChatAPI) Register(r gin.IRouter) {
-	r.POST("/v1/chat", a.postChat)
-	r.GET("/v1/chat/history", a.getHistory)
+	r.POST("/v1/send-message", a.postChat)
+	r.GET("/v1/get-history", a.getHistory)
 }
 
 func (a *ChatAPI) postChat(c *gin.Context) {

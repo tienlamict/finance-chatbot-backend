@@ -21,8 +21,8 @@ import (
 	chatBiz "finance-chatbot/microservice/chatbot/business"
 	"finance-chatbot/microservice/chatbot/entity"
 	chatRepo "finance-chatbot/microservice/chatbot/repository/mysql"
-	chatRPCClient "finance-chatbot/microservice/chatbot/repository/rpc"
 	chatAPI "finance-chatbot/microservice/chatbot/transport/api"
+	httpclient "finance-chatbot/microservice/chatbot/transport/http"
 
 	"github.com/gin-gonic/gin"
 
@@ -74,25 +74,27 @@ func ComposeTaskAPIService(serviceCtx sctx.ServiceContext) TaskService {
 	return serviceAPI
 }
 
-func ComposeChatAPIService(serviceCtx sctx.ServiceContext) *chatAPI.ChatAPI {
-	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+func ComposeChatAPIService(sc sctx.ServiceContext) *chatAPI.ChatAPI {
+	db := sc.MustGet(common.KeyCompMySQL).(common.GormComponent)
 
-	// Lấy/khởi tạo gRPC client
+	// Lấy config từ KeyCompConf (repo của bạn dùng interface common.Config)
+	cfg := sc.MustGet(common.KeyCompConf).(common.Config)
+
+	// giả sử bạn bổ sung method này, hoặc đọc ENV: AI_HTTP_BASE_URL, AI_HTTP_API_KEY
+	baseURL := cfg.GetAIAddress() // ví dụ: http://ai-service:8080
+	//apiKey := cfg.GetAIAuthorization() // nếu có
+
 	var ai entity.AIClient
-	if v, ok := serviceCtx.Get(common.KeyCompAIClient); ok {
+	if v, ok := sc.Get(common.KeyCompAIClient); ok {
 		ai = v.(entity.AIClient)
 	} else {
-		cfg := serviceCtx.MustGet(common.KeyCompConf).(common.Config)
-		addr := cfg.GetAIAddress()
-		cli, err := chatRPCClient.NewAIClient(addr)
-		if err != nil {
-			panic(err)
-		}
-		ai = cli
+		ai = httpclient.NewAIHTTPClient(baseURL, apiKey)
+		sc.Add(common.KeyCompAIClient, ai)
 	}
 
 	repo := chatRepo.NewMySQLRepository(db.GetDB())
 	uc := chatBiz.NewChatBusiness(repo, ai)
+
 	return chatAPI.NewAPI(uc)
 }
 

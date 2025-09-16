@@ -9,14 +9,14 @@ services:
     environment:
       DB_DSN: "root:@tcp(mysql:3306)/finance_chatbot_db?charset=utf8mb4&parseTime=True&loc=Local"
       JWT_SECRET: "very-important-please-change-it!"
-      GIN_PORT: "3000"
+      GIN_PORT: "3001"
       GRPC_PORT: "3300"
     ports:
-      - "3000:3000"
+      - "3001:3001"
     networks:
       - intranet
   mysql:
-    image: mysql:9.4.0
+    image: mysql:8.0.32
     volumes:
       - "./data.sql:/docker-entrypoint-initdb.d/data.sql"
     environment:
