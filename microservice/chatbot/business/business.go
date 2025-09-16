@@ -1,37 +1,30 @@
 package business
 
 import (
+	"context"
+	"finance-chatbot/addon/core"
 	"finance-chatbot/microservice/chatbot/entity"
 )
 
-type ChatUsecase struct {
-	repo     entity.ChatRepository
-	aiClient entity.AIClient
+type ChatRepository interface {
+	AddNewMessage(ctx context.Context, data *entity.ChatDataCreation) error
+	GetMessageById(ctx context.Context, id string) (*entity.ChatMessage, error)
+	ListMessages(ctx context.Context, userID string, limit int) ([]entity.ChatMessage, error)
 }
 
-func NewChatBusiness(repo entity.ChatRepository, aiClient entity.AIClient) *ChatUsecase {
-	return &ChatUsecase{repo: repo, aiClient: aiClient}
+type UserRepository interface {
+	GetUsersByIds(ctx context.Context, ids []int) ([]core.SimpleUser, error)
+	GetUserById(ctx context.Context, id int) (*core.SimpleUser, error)
 }
 
-func (uc *ChatUsecase) SendMessage(userID, prompt string) (assistantMsg entity.ChatMessage, err error) {
-	// 1. Trim và validate input
-	// 2. Persist user message vào DB qua repo
-	if err = uc.repo.Create(&entity.ChatMessage{UserID: userID, Role: entity.RoleUser, Content: prompt}); err != nil {
-		return
+type business struct {
+	chatRepo ChatRepository
+	userRepo UserRepository
+}
+
+func NewBusiness(chatRepo ChatRepository, userRepo UserRepository) *business {
+	return &business{
+		chatRepo: chatRepo,
+		userRepo: userRepo,
 	}
-
-	// 3. Lấy short history (last 20)
-	history, _ := uc.repo.ListByUser(userID, 20)
-
-	// 4. Gọi AIClient.GenerateReply (gRPC call sang AI service)
-	reply, err := uc.aiClient.GenerateReply(userID, history, prompt)
-
-	// 5. Persist assistant reply vào DB
-	assistantMsg = entity.ChatMessage{UserID: userID, Role: entity.RoleAssistant, Content: reply}
-	err = uc.repo.Create(&assistantMsg)
-	return
-}
-
-func (uc *ChatUsecase) GetHistory(userID string, limit int) ([]entity.ChatMessage, error) {
-	return uc.repo.ListByUser(userID, limit)
 }

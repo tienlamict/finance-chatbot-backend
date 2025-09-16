@@ -17,6 +17,8 @@ type ChatMessage struct {
 	CreatedAt time.Time `json:"created_at" gorm:"column:created_at;autoCreateTime"`
 }
 
+func (ChatMessage) TableName() string { return "chat_messages" }
+
 type ChatRepository interface {
 	Create(msg *ChatMessage) error
 	ListByUser(userID string, limit int) ([]ChatMessage, error)

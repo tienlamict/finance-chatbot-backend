@@ -74,8 +74,7 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 	userAPIService := composer.ComposeUserAPIService(serviceCtx)
 	taskAPIService := composer.ComposeTaskAPIService(serviceCtx)
 	authAPIService := composer.ComposeAuthAPIService(serviceCtx)
-	chatAPIService := composer.ComposeChatAPIService(serviceCtx)
-	//chatbotService:= composer.
+	//chatAPIService := composer.ComposeChatAPIService(serviceCtx)
 
 	requireAuthMdw := middleware.RequireAuth(composer.ComposeAuthRPCClient(serviceCtx))
 
@@ -90,11 +89,6 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 		tasks.GET("/:task-id", taskAPIService.GetTaskHdl())
 		tasks.PATCH("/:task-id", taskAPIService.UpdateTaskHdl())
 		tasks.DELETE("/:task-id", taskAPIService.DeleteTaskHdl())
-	}
-
-	chat := router.Group("/chatbot", requireAuthMdw)
-	{
-		chatAPIService.Register(chat)
 	}
 }
 
