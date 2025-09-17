@@ -25,15 +25,18 @@ docker run --name finance-admin-db -e MYSQL_ROOT_PASSWORD=mysecretpassword -d -p
 --------------------------------------
 # 1. Open your terminal on project
 
-- Remove volume (optional)
+- Remove volume (optional):
+
 docker compose down -v
 
 - Build app:
+
 docker compose up --force-recreate --detach --build app
 
 
 # 2. API
-- Register
+- Register:
+
 curl --location 'http://localhost:3001/v1/register' \
 --header 'Content-Type: application/json' \
 --data-raw '{
@@ -43,7 +46,8 @@ curl --location 'http://localhost:3001/v1/register' \
     "first_name": "Lam "
 }'
 
-- Login
+- Login:
+
 curl --location 'http://localhost:3001/v1/authenticate' \
 --header 'Content-Type: application/json' \
 --data-raw '{
@@ -51,7 +55,8 @@ curl --location 'http://localhost:3001/v1/authenticate' \
     "password": "12345678"
 }'
 
-- Send message
+- Send message:
+
 curl --location 'http://localhost:3001/v1/chat/send-message' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNTMycW9zOGpqTTIiLCJleHAiOjE3NTg3MjY2MDIsIm5iZiI6MTc1ODEyMTgwMiwiaWF0IjoxNzU4MTIxODAyLCJqdGkiOiI3MGY5NGQ5OC04ZGI0LTRmNWYtYjU4NC01NWRkODRlNjdjNTQifQ.fy2AT5W4FL89e1B8iGeyKkJ3Di8j-fWZBh1H6JCwORg' \
