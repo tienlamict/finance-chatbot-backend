@@ -9,7 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func (api *api) CreateChatHandler() func(*gin.Context) {
+func (api *api) SendMessageHandler() func(*gin.Context) {
 	return func(c *gin.Context) {
 		var data entity.ChatDataCreation
 
@@ -26,7 +26,7 @@ func (api *api) CreateChatHandler() func(*gin.Context) {
 		// uid, _ := core.FromBase58(requester.GetSubject())
 		// data.UserId = int(uid.GetLocalID())
 
-		if err := api.business.CreateNewChat(ctx, &data); err != nil {
+		if err := api.business.SendNewMessage(ctx, &data); err != nil {
 			common.WriteErrorResponse(c, err)
 			return
 		}

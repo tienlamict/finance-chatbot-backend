@@ -47,7 +47,7 @@ type AuthService interface {
 }
 
 type ChatbotService interface {
-	CreateChatHandler() func(*gin.Context)
+	SendMessageHandler() func(*gin.Context)
 	//GetHistory() func(*gin.Context)
 }
 

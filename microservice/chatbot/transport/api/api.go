@@ -15,7 +15,7 @@ type ServiceContext interface {
 
 // Định nghĩa các hành vi nghiệp vụ mà transport cần.
 type Business interface {
-	CreateNewChat(ctx context.Context, data *entity.ChatDataCreation) error
+	SendNewMessage(ctx context.Context, data *entity.ChatDataCreation) error
 	//GetMessageByUserId(ctx context.Context, id int) (*entity.ChatMessage, error) // => chưa implement sẽ báo lỗi trong composer
 	//ListMessages(ctx context.Context, userID string, limit int) ([]entity.ChatMessage, error)
 }

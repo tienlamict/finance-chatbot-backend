@@ -6,7 +6,7 @@ import (
 	"finance-chatbot/microservice/chatbot/entity"
 )
 
-func (biz *business) CreateNewChat(ctx context.Context, data *entity.ChatDataCreation) error {
+func (biz *business) SendNewMessage(ctx context.Context, data *entity.ChatDataCreation) error {
 	requester := core.GetRequester(ctx)
 
 	uid, _ := core.FromBase58(requester.GetSubject())
@@ -14,7 +14,7 @@ func (biz *business) CreateNewChat(ctx context.Context, data *entity.ChatDataCre
 
 	data.Prepare(requesterId, "user")
 
-	if err := biz.chatRepo.AddNewMessage(ctx, data); err != nil {
+	if err := biz.chatRepo.SendNewMessage(ctx, data); err != nil {
 		return core.ErrInternalServerError.WithError(entity.ErrCannotCreateMessage.Error())
 	}
 

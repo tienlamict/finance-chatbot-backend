@@ -94,7 +94,7 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 	chatbot := router.Group("/chat", requireAuthMdw)
 	{
 		//chatbot.GET("/history", chatAPIService.GetHistory())
-		chatbot.POST("/send-message", chatAPIService.CreateChatHandler())
+		chatbot.POST("/send-message", chatAPIService.SendMessageHandler())
 		//chatbot.POST("/create", /*requireAuthMdw,*/ /*chatAPIService.*/chatAPIService.CreateChatHandler())
 	}
 }
