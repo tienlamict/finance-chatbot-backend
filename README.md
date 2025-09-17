@@ -36,7 +36,7 @@ docker compose up --force-recreate --detach --build app
 
 # 2. API
 - Register:
-
+```shell
 curl --location 'http://localhost:3001/v1/register' \
 --header 'Content-Type: application/json' \
 --data-raw '{
@@ -45,18 +45,21 @@ curl --location 'http://localhost:3001/v1/register' \
     "last_name": "Microservices",
     "first_name": "Lam "
 }'
+```
 
 - Login:
-
+```shell
 curl --location 'http://localhost:3001/v1/authenticate' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "email": "lamnt@chatbot.com",
     "password": "12345678"
 }'
+```
+
 
 - Send message:
-
+```shell
 curl --location 'http://localhost:3001/v1/chat/send-message' \
 --header 'Content-Type: application/json' \
 --header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNTMycW9zOGpqTTIiLCJleHAiOjE3NTg3MjY2MDIsIm5iZiI6MTc1ODEyMTgwMiwiaWF0IjoxNzU4MTIxODAyLCJqdGkiOiI3MGY5NGQ5OC04ZGI0LTRmNWYtYjU4NC01NWRkODRlNjdjNTQifQ.fy2AT5W4FL89e1B8iGeyKkJ3Di8j-fWZBh1H6JCwORg' \
@@ -64,3 +67,4 @@ curl --location 'http://localhost:3001/v1/chat/send-message' \
     "user_id": "u1",
     "content": "Hello, how is my account balance?"
   }'
+  ```
