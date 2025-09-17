@@ -23,8 +23,36 @@ docker run --name finance-admin-db -e MYSQL_ROOT_PASSWORD=mysecretpassword -d -p
 
 --------------------------------------
 
-0. docker compose down -v
+# Remove volume 
+docker compose down -v
 
-1. docker compose up --force-recreate --detach --build app
+# Build app 
+docker compose up --force-recreate --detach --build app
 
-2. docker compose exec app ./chatbot_app outenv
+
+# Register
+curl --location 'http://localhost:3001/v1/register' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "lamnt@chatbot.com",
+    "password": "12345678",
+    "last_name": "Microservices",
+    "first_name": "Lam "
+}'
+
+# Login
+curl --location 'http://localhost:3001/v1/authenticate' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email": "lamnt@chatbot.com",
+    "password": "12345678"
+}'
+
+# Send message
+curl --location 'http://localhost:3001/v1/chat/send-message' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNTMycW9zOGpqTTIiLCJleHAiOjE3NTg3MjY2MDIsIm5iZiI6MTc1ODEyMTgwMiwiaWF0IjoxNzU4MTIxODAyLCJqdGkiOiI3MGY5NGQ5OC04ZGI0LTRmNWYtYjU4NC01NWRkODRlNjdjNTQifQ.fy2AT5W4FL89e1B8iGeyKkJ3Di8j-fWZBh1H6JCwORg' \
+--data '{
+    "user_id": "u1",
+    "content": "Hello, how is my account balance?"
+  }'
