@@ -15,7 +15,8 @@ func (biz *business) SendNewMessage(ctx context.Context, data *entity.ChatDataCr
 	data.Prepare(requesterId, "user")
 
 	if err := biz.chatRepo.SendNewMessage(ctx, data); err != nil {
-		return core.ErrInternalServerError.WithError(entity.ErrCannotCreateMessage.Error())
+		return core.ErrInternalServerError.WithError(err.Error())
+		//return core.ErrInternalServerError.WithError(entity.ErrCannotCreateMessage.Error())
 	}
 
 	return nil

@@ -1,13 +1,13 @@
-
 services:
   app:
     build:
       dockerfile: Dockerfile
       context: .
     depends_on:
-      - mysql
+      mysql:
+        condition: service_healthy
     environment:
-      DB_DSN: "root:@tcp(mysql:3306)/finance_chatbot_db?charset=utf8mb4&parseTime=True&loc=Local"
+      DB_DSN: "app_user:app_pass@tcp(mysql:3306)/finance_chatbot_db?charset=utf8mb4&parseTime=True&loc=Local"
       JWT_SECRET: "very-important-please-change-it!"
       GIN_PORT: "3001"
       GRPC_PORT: "3300"
@@ -15,16 +15,29 @@ services:
       - "3001:3001"
     networks:
       - intranet
+
   mysql:
     image: mysql:8.0.32
-    volumes:
-      - "./data.sql:/docker-entrypoint-initdb.d/data.sql"
     environment:
-      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
       MYSQL_DATABASE: "finance_chatbot_db"
+      MYSQL_USER: "app_user"
+      MYSQL_PASSWORD: "app_pass"
+      MYSQL_ROOT_PASSWORD: "root_pass"
     ports:
       - "3310:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql   # <-- dùng named volume
+      - ./data.sql:/docker-entrypoint-initdb.d/data.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "app_user", "-papp_pass"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     networks:
       - intranet
+
 networks:
   intranet:
+
+volumes:
+  mysql-data: {}   # <-- KHAI BÁO named volume

@@ -23,6 +23,8 @@ docker run --name finance-admin-db -e MYSQL_ROOT_PASSWORD=mysecretpassword -d -p
 
 --------------------------------------
 
+0. docker compose down -v
+
 1. docker compose up --force-recreate --detach --build app
 
 2. docker compose exec app ./chatbot_app outenv
