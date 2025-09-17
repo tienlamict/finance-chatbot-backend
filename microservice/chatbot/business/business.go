@@ -8,8 +8,8 @@ import (
 
 type ChatRepository interface {
 	AddNewMessage(ctx context.Context, data *entity.ChatDataCreation) error
-	GetMessageById(ctx context.Context, id string) (*entity.ChatMessage, error)
-	ListMessages(ctx context.Context, userID string, limit int) ([]entity.ChatMessage, error)
+	//GetMessageByUserId(ctx context.Context, id string) (*entity.ChatMessage, error)
+	//ListMessages(ctx context.Context, userID string, limit int) ([]entity.ChatMessage, error)
 }
 
 type UserRepository interface {

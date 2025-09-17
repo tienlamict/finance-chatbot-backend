@@ -1,6 +1,7 @@
 package entity
 
 import (
+	"finance-chatbot/addon/common"
 	"finance-chatbot/addon/core"
 )
 
@@ -19,4 +20,8 @@ func (t *ChatDataCreation) Prepare(userID int, role string) {
 	t.SQLModel = core.NewSQLModel()
 	t.UserID = userID
 	t.Role = role
+}
+
+func (t *ChatDataCreation) Mask() {
+	t.SQLModel.Mask(common.MaskTypeTask)
 }
