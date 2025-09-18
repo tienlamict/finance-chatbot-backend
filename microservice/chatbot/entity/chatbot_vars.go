@@ -10,7 +10,7 @@ type ChatDataCreation struct {
 	core.SQLModel
 	Content string `json:"content" gorm:"column:content;" db:"content"`
 	// Do not allow client set these fields
-	UserID int    `json:"-" gorm:"column:user_id" db:"user_id"`
+	UserID int    `json:"user_id" gorm:"column:user_id" db:"user_id"`
 	Role   string `json:"-" gorm:"column:role;" db:"role"`
 }
 
