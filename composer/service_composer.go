@@ -19,6 +19,7 @@ import (
 	userRPC "finance-chatbot/microservice/user/transport/rpc"
 
 	chatBusiness "finance-chatbot/microservice/chatbot/business"
+	chatGateways "finance-chatbot/microservice/chatbot/gateways"
 	chatSQLRepository "finance-chatbot/microservice/chatbot/repository/mysql"
 	chatAPI "finance-chatbot/microservice/chatbot/transport/api"
 
@@ -75,7 +76,9 @@ func ComposeTaskAPIService(serviceCtx sctx.ServiceContext) TaskService {
 func ComposeChatbotAPIService(serviceCtx sctx.ServiceContext) ChatbotService {
 	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
 	userClient := taskUserRPC.NewClient(composeUserRPCClient(serviceCtx))
-	chatbotRepo := chatSQLRepository.NewMySQLRepository(db.GetDB())
+	chatbotRepo := chatSQLRepository.NewChatRepoMySQL(db.GetDB())
+	aiClient := chatGateways.NewHTTPAIClient("http://ai-service.local/chat")
+	//biz := &entity.ChatMessage{Repo: chatRepo, AIClient: aiClient}
 	biz := chatBusiness.NewBusiness(chatbotRepo, userClient)
 	serviceAPI := chatAPI.NewAPI(serviceCtx, biz)
 	return serviceAPI

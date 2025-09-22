@@ -9,6 +9,8 @@ go get github.com/spf13/viper@latest
 
 go get google.golang.org/grpc
 
+go get github.com/gofrs/uuid
+
 ------------------Gen proto------------------
 winget install protobuf // Install protobuf
 

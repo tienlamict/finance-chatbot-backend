@@ -9,7 +9,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func (repo *mysqlRepo) GetMessageByUserId(ctx context.Context, id int) (*entity.ChatMessage, error) {
+func (repo *ChatRepoMySQL) GetMessageByUserId(ctx context.Context, id int) (*entity.ChatMessage, error) {
 	var data entity.ChatMessage
 
 	if err := repo.db.
