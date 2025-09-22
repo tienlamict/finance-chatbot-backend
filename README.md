@@ -11,6 +11,8 @@ go get google.golang.org/grpc
 
 go get github.com/gofrs/uuid
 
+go get gorm.io/datatypes
+
 ------------------Gen proto------------------
 winget install protobuf // Install protobuf
 
