@@ -51,3 +51,17 @@ func composeUserRPCClient(serviceCtx sctx.ServiceContext) pb.UserServiceClient {
 
 	return pb.NewUserServiceClient(clientConn)
 }
+
+// Cần viết composeAIRPCClient để trả về pb.ChatbotServiceClient
+func composeAIRPCClient(serviceCtx sctx.ServiceContext) pb.ChatbotServiceClient {
+	configComp := serviceCtx.MustGet(common.KeyCompConf).(common.Config)
+
+	opts := grpc.WithTransportCredentials(insecure.NewCredentials())
+	clientConn, err := grpc.Dial(configComp.GetGRPCServerAddress(), opts)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return pb.NewChatbotServiceClient(clientConn)
+}

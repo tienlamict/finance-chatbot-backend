@@ -22,7 +22,7 @@ type chatUsecase struct {
 	ai rpcrepo.AIClient
 }
 
-func NewChatUsecase(sqlRepo *mysqlrepo.MySQLRepo, aiClient rpcrepo.AIClient) ChatUsecase {
+func NewChatBusiness(sqlRepo *mysqlrepo.MySQLRepo, aiClient rpcrepo.AIClient) ChatUsecase {
 	return &chatUsecase{
 		sql: sqlRepo,
 		ai:  aiClient,

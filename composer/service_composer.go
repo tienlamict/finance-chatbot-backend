@@ -18,6 +18,9 @@ import (
 	userApi "finance-chatbot/microservice/user/transport/api"
 	userRPC "finance-chatbot/microservice/user/transport/rpc"
 
+	chatBotBusiness "finance-chatbot/microservice/chatbot/business"
+	chatbotSQLRepository "finance-chatbot/microservice/chatbot/repository/mysql"
+
 	"github.com/gin-gonic/gin"
 
 	"finance-chatbot/proto/pb"
@@ -104,4 +107,14 @@ func ComposeAuthGRPCService(serviceCtx sctx.ServiceContext) pb.AuthServiceServer
 	authService := authRPC.NewService(biz)
 
 	return authService
+}
+
+func ComposeChatbotAPIService(serviceCtx sctx.ServiceContext) AuthService {
+	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+
+	chatBotRepo := chatbotSQLRepository.NewMySQLRepo(db.GetDB())
+	chatbotBiz := chatBotBusiness.NewChatBusiness(chatBotRepo)
+	userService := userRPC.NewService(userBiz)
+
+	return userService
 }
