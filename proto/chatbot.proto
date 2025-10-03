@@ -1,0 +1,57 @@
+syntax = "proto3";
+package pb;
+
+option go_package = "/pb";
+
+service ChatbotService {
+  rpc SendMessage (SendMessageRequest) returns (SendMessageReply);
+  rpc ListMessages (ListMessagesRequest) returns (ListMessagesReply);
+}
+
+message SendMessageRequest {
+  string conversation_id = 1; // rỗng -> tạo mới
+  string content         = 2; // prompt
+  string user_id         = 3; // lấy từ context auth nội bộ hoặc truyền trực tiếp
+  string org_id          = 4; // optional
+  string title           = 5; // optional khi tạo conv lần đầu
+}
+
+message SendMessageReply {
+  string conversation_id       = 1;
+  string user_message_id       = 2;
+  string assistant_message_id  = 3;
+  string assistant_content     = 4;
+  string model_name            = 5;
+  int32  tokens_input          = 6;
+  int32  tokens_output         = 7;
+  int32  latency_ms            = 8;
+  int64  user_message_created_at_ms = 9;
+  int64  ai_message_created_at_ms   = 10;
+}
+
+message ListMessagesRequest {
+  string conversation_id = 1;
+  int32  limit           = 2;
+  int32  offset          = 3;
+}
+
+message MessageItem {
+  string id              = 1;
+  string conversation_id = 2;
+  string parent_id       = 3;
+  string role            = 4; // "user" | "assistant" | "tool"
+  string content         = 5;
+  string content_type    = 6; // "text" | "markdown" | "json"
+  int32  tokens_input    = 7;
+  int32  tokens_output   = 8;
+  int32  latency_ms      = 9;
+  string model_name      = 10;
+  string error_code      = 11;
+  int64  created_at_ms   = 12;
+}
+
+message ListMessagesReply {
+  string conversation_id = 1;
+  int64  total           = 2;
+  repeated MessageItem items = 3;
+}
