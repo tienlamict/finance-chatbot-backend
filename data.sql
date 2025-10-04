@@ -49,7 +49,7 @@ CREATE TABLE conversations (
   `status`        ENUM('active','archived','deleted') DEFAULT 'active',
   `created_at`    DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3), -- 3 độ chinh xác mili giây phục mục đích tính độ trễn (latency)
   `updated_at`    DATETIME(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
   INDEX idx_conv_user_created (user_id, created_at),
   INDEX idx_conv_org_created  (org_id, created_at)
 );
