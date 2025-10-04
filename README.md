@@ -73,3 +73,14 @@ curl --location 'http://localhost:3001/v1/chat/send-message' \
     "content": "Hello, how is my account balance?"
   }'
   ```
+
+- Promt:
+```shell
+curl --location 'http://localhost:3001/v1/chatbot/promt' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJlNTMycW9zOGpqTTIiLCJleHAiOjE3NjAxNTI3NjIsIm5iZiI6MTc1OTU0Nzk2MiwiaWF0IjoxNzU5NTQ3OTYyLCJqdGkiOiI4NDZlMmI1OC1iNmY2LTQyZTUtOTlmYS02N2E5ZjMzM2NkY2YifQ.ltRCc-5ynvgzMlWpMT2Dchp6J-LMMtsmIlRqCcN5w-o' \
+--data '{
+    "user_id": "lamnt",
+    "content": "Báo cáo tỷ giá ngoại tệ 2 ngày gần đây nhất"
+  }'
+  ```
