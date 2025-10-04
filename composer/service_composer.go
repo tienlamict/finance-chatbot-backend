@@ -7,6 +7,7 @@ import (
 	authUserRPC "finance-chatbot/microservice/auth/repository/rpc"
 	authAPI "finance-chatbot/microservice/auth/transport/api"
 	authRPC "finance-chatbot/microservice/auth/transport/rpc"
+	"os"
 
 	taskBusiness "finance-chatbot/microservice/task/business"
 	taskSQLRepository "finance-chatbot/microservice/task/repository/mysql"
@@ -130,15 +131,15 @@ func ComposeAuthGRPCService(serviceCtx sctx.ServiceContext) pb.AuthServiceServer
 
 // Chọn AI client theo ENV: AI_PROTOCOL=rest|grpc (mặc định grpc)
 func chooseAIClient(serviceCtx sctx.ServiceContext) chatrpc.AIClient {
-	// switch os.Getenv("AI_PROTOCOL") {
-	// case "rest", "REST":
-	// 	return composeAIRESTClient()                  // <--- REST adapter mới
-	// default:
+	switch os.Getenv("AI_PROTOCOL") {
+	case "rest", "REST":
+		return composeAIRESTClient() // <--- REST adapter mới
+	// case "grpc":
 	// 	aiGrpc := composeAIRPCClient(serviceCtx)      // <--- gRPC cũ (đã có)
-	// 	return NewAIClientAdapter(aiGrpc)             // adapter gRPC -> AIClient
-	// }
-
-	return composeAIRESTClient()
+	// 	return NewAIClientAdapter(aiGrpc)
+	default:
+		return NewAIMockClient() // mock
+	}
 }
 
 // Dùng cho HTTP

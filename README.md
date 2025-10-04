@@ -31,13 +31,13 @@ docker run --name finance-admin-db -e MYSQL_ROOT_PASSWORD=mysecretpassword -d -p
 # 1. Open your terminal on project
 
 - Remove volume (optional):
-
+```shell
 docker compose down -v
-
+```
 - Build app:
-
+```shell
 docker compose up --force-recreate --detach --build app
-
+```
 
 # 2. API
 - Register:
