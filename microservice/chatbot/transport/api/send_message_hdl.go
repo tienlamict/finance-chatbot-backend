@@ -24,7 +24,7 @@ func (a *API) resolveUserID(c *gin.Context, fallback string) string {
 	return fallback
 }
 
-func (a *API) SendMessageHandler() gin.HandlerFunc {
+func (a *API) SendMessageHandler() func(*gin.Context) {
 	return func(c *gin.Context) {
 		var req entity.SendMessageRequest
 		if err := c.ShouldBindJSON(&req); err != nil {

@@ -18,8 +18,10 @@ import (
 	userApi "finance-chatbot/microservice/user/transport/api"
 	userRPC "finance-chatbot/microservice/user/transport/rpc"
 
-	chatBotBusiness "finance-chatbot/microservice/chatbot/business"
-	chatbotSQLRepository "finance-chatbot/microservice/chatbot/repository/mysql"
+	chatBusiness "finance-chatbot/microservice/chatbot/business"
+	chatmysql "finance-chatbot/microservice/chatbot/repository/mysql"
+	chatrpc "finance-chatbot/microservice/chatbot/repository/rpc"
+	chatAPI "finance-chatbot/microservice/chatbot/transport/api"
 
 	"github.com/gin-gonic/gin"
 
@@ -47,7 +49,7 @@ type AuthService interface {
 
 type ChatbotService interface {
 	SendMessageHandler() func(*gin.Context)
-	//GetHistory() func(*gin.Context)
+	ListMessagesHandler() func(*gin.Context)
 }
 
 func ComposeUserAPIService(serviceCtx sctx.ServiceContext) UserService {
@@ -60,12 +62,29 @@ func ComposeUserAPIService(serviceCtx sctx.ServiceContext) UserService {
 	return userService
 }
 
+// Đây là một hàm factory, nhận vào ServiceContext (container chứa các dependency chung như DB, logger, config…)
+// Trả về một TaskService (tức API service của module task)
 func ComposeTaskAPIService(serviceCtx sctx.ServiceContext) TaskService {
+	// Lấy component kết nối MySQL từ serviceCtx
+	// Ép kiểu về GormComponent để sử dụng GORM
 	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
 
+	// Tạo client RPC để gọi sang User microservice
+	// Hàm composeUserRPCClient được định nghĩa trong cùng package composer
+	// composeUserRPCClient sẽ dựng kết nối gRPC tới service user, sau đó taskUserRPC.NewClient(...) bọc lại thành client chuyên biệt.
 	userClient := taskUserRPC.NewClient(composeUserRPCClient(serviceCtx))
+
+	// Tạo repository layer cho task, implement bằng MySQL.
+	// db.GetDB() trả về con trỏ *gorm.DB và được wrap trong taskSQLRepository.
 	taskRepo := taskSQLRepository.NewMySQLRepository(db.GetDB())
+
+	// Tạo business/usecase layer cho task.
+	// biz sẽ chứa logic chính: tạo task, xoá, update…
+	// Nó phụ thuộc vào taskRepo (đọc/ghi DB) và userClient (gọi sang user service để xác thực/kiểm tra user).
 	biz := taskBusiness.NewBusiness(taskRepo, userClient)
+
+	// Tạo transport layer cho task (HTTP/gRPC handler).
+	// taskAPI.NewAPI nhận biz để xử lý request, đồng thời dùng serviceCtx để đăng ký middleware/logging…
 	serviceAPI := taskAPI.NewAPI(serviceCtx, biz)
 
 	return serviceAPI
@@ -109,12 +128,28 @@ func ComposeAuthGRPCService(serviceCtx sctx.ServiceContext) pb.AuthServiceServer
 	return authService
 }
 
-func ComposeChatbotAPIService(serviceCtx sctx.ServiceContext) AuthService {
-	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+// Chọn AI client theo ENV: AI_PROTOCOL=rest|grpc (mặc định grpc)
+func chooseAIClient(serviceCtx sctx.ServiceContext) chatrpc.AIClient {
+	// switch os.Getenv("AI_PROTOCOL") {
+	// case "rest", "REST":
+	// 	return composeAIRESTClient()                  // <--- REST adapter mới
+	// default:
+	// 	aiGrpc := composeAIRPCClient(serviceCtx)      // <--- gRPC cũ (đã có)
+	// 	return NewAIClientAdapter(aiGrpc)             // adapter gRPC -> AIClient
+	// }
 
-	chatBotRepo := chatbotSQLRepository.NewMySQLRepo(db.GetDB())
-	chatbotBiz := chatBotBusiness.NewChatBusiness(chatBotRepo)
-	userService := userRPC.NewService(userBiz)
+	return composeAIRESTClient()
+}
 
-	return userService
+// Dùng cho HTTP
+func ComposeChatbotAPIService(serviceCtx sctx.ServiceContext) ChatbotService {
+	dbComp := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+	gormDB := dbComp.GetDB()
+
+	aiClient := chooseAIClient(serviceCtx) // REST/gRPC
+
+	sqlRepo := chatmysql.NewMySQLRepo(gormDB)
+	biz := chatBusiness.NewChatBusiness(sqlRepo, aiClient)
+	api := chatAPI.NewAPI(biz)
+	return api
 }

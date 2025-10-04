@@ -9,7 +9,7 @@ import (
 	"finance-chatbot/microservice/chatbot/entity"
 )
 
-func (a *API) ListMessagesHandler() gin.HandlerFunc {
+func (a *API) ListMessagesHandler() func(*gin.Context) {
 	return func(c *gin.Context) {
 		var req entity.ListMessagesRequest
 		if err := c.ShouldBind(&req); err != nil {
