@@ -1,6 +1,7 @@
 package composer
 
 import (
+	"context"
 	"finance-chatbot/addon/common"
 	authBusiness "finance-chatbot/microservice/auth/business"
 	authSQLRepository "finance-chatbot/microservice/auth/repository/mysql"
@@ -103,6 +104,30 @@ func ComposeAuthAPIService(serviceCtx sctx.ServiceContext) AuthService {
 	serviceAPI := authAPI.NewAPI(serviceCtx, biz)
 
 	return serviceAPI
+}
+
+// ComposeRBACClient exposes a lightweight adapter for permission checks in middleware layer.
+type rbacClient struct {
+	repo userSQLRepository.RBACRepository
+}
+
+func (r *rbacClient) HasAnyPermission(userID int, permCodes ...string) (bool, error) {
+	for _, code := range permCodes {
+		ok, err := r.repo.HasPermission(context.Background(), userID, code)
+		if err != nil {
+			return false, err
+		}
+		if ok {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func ComposeRBACClient(serviceCtx sctx.ServiceContext) *rbacClient {
+	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+	repo := userSQLRepository.NewRBACRepository(db.GetDB())
+	return &rbacClient{repo: repo}
 }
 
 func ComposeUserGRPCService(serviceCtx sctx.ServiceContext) pb.UserServiceServer {

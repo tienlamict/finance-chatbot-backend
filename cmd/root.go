@@ -77,24 +77,28 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 	chatbotAPIService := composer.ComposeChatbotAPIService(serviceCtx)
 
 	requireAuthMdw := middleware.RequireAuth(composer.ComposeAuthRPCClient(serviceCtx))
+	rbacClient := composer.ComposeRBACClient(serviceCtx)
 
 	router.POST("/authenticate", authAPIService.LoginHdl())
 	router.POST("/register", authAPIService.RegisterHdl())
 	router.GET("/profile", requireAuthMdw, userAPIService.GetUserProfileHdl())
 
+	// Task permissions
+	// GET list/read -> task.read; POST -> task.create; PATCH -> task.update; DELETE -> task.delete
 	tasks := router.Group("/tasks", requireAuthMdw)
 	{
-		tasks.GET("", taskAPIService.ListTaskHdl())
-		tasks.POST("", taskAPIService.CreateTaskHdl())
-		tasks.GET("/:task-id", taskAPIService.GetTaskHdl())
-		tasks.PATCH("/:task-id", taskAPIService.UpdateTaskHdl())
-		tasks.DELETE("/:task-id", taskAPIService.DeleteTaskHdl())
+		tasks.GET("", middleware.RequirePermissions(rbacClient, "task.read"), taskAPIService.ListTaskHdl())
+		tasks.POST("", middleware.RequirePermissions(rbacClient, "task.create"), taskAPIService.CreateTaskHdl())
+		tasks.GET("/:task-id", middleware.RequirePermissions(rbacClient, "task.read"), taskAPIService.GetTaskHdl())
+		tasks.PATCH("/:task-id", middleware.RequirePermissions(rbacClient, "task.update"), taskAPIService.UpdateTaskHdl())
+		tasks.DELETE("/:task-id", middleware.RequirePermissions(rbacClient, "task.delete"), taskAPIService.DeleteTaskHdl())
 	}
 
+	// Chat permissions (example codes: chat.send, chat.read)
 	chat := router.Group("/chatbot", requireAuthMdw)
 	{
-		chat.POST("/promt", chatbotAPIService.SendMessageHandler())
-		chat.GET("/messages", chatbotAPIService.ListMessagesHandler())
+		chat.POST("/promt", middleware.RequirePermissions(rbacClient, "chat.send"), chatbotAPIService.SendMessageHandler())
+		chat.GET("/messages", middleware.RequirePermissions(rbacClient, "chat.read"), chatbotAPIService.ListMessagesHandler())
 	}
 }
 

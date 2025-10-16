@@ -114,3 +114,71 @@ CREATE TABLE chat_events (
   INDEX idx_evt_conv_created (conversation_id, created_at),
   INDEX idx_evt_type_created (type, created_at)
 );
+
+-- ==== RBAC tables ====
+CREATE TABLE IF NOT EXISTS roles (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  code        VARCHAR(64)  NOT NULL UNIQUE, -- 'sadmin','admin','user',...
+  name        VARCHAR(128) NOT NULL,
+  description VARCHAR(255) NULL,
+  created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS permissions (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  code        VARCHAR(128) NOT NULL UNIQUE, -- 'chat.send','chat.read','task.create',...
+  name        VARCHAR(128) NOT NULL,
+  description VARCHAR(255) NULL,
+  created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+  role_id       INT NOT NULL,
+  permission_id INT NOT NULL,
+  created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (role_id, permission_id),
+  CONSTRAINT fk_rp_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
+  CONSTRAINT fk_rp_perm FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS user_roles (
+  user_id    INT NOT NULL,     -- map sang users.id (INT AUTO_INCREMENT)
+  role_id    INT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, role_id),
+  CONSTRAINT fk_ur_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_ur_role FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ==== seed cơ bản ====
+INSERT INTO roles (code, name) VALUES
+  ('sadmin','Super Admin'),
+  ('admin','Admin'),
+  ('user','User')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+
+INSERT INTO permissions (code, name) VALUES
+  ('chat.send','Chat: send message'),
+  ('chat.read','Chat: read history'),
+  ('task.create','Task: create'),
+  ('task.update','Task: update'),
+  ('task.delete','Task: delete'),
+  ('task.read','Task: read')
+ON DUPLICATE KEY UPDATE name=VALUES(name);
+
+-- gán quyền mặc định cho role
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p
+WHERE r.code='user' AND p.code IN ('chat.send','chat.read','task.read');
+
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r JOIN permissions p
+WHERE r.code='admin' AND p.code IN ('chat.send','chat.read','task.read','task.create','task.update','task.delete');
+
+-- map người dùng vào role 'user' 
+INSERT IGNORE INTO user_roles (user_id, role_id)
+SELECT u.id, r.id
+FROM users u
+JOIN roles r ON r.code='user';
