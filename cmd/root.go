@@ -23,13 +23,22 @@ import (
 )
 
 func newServiceCtx() sctx.ServiceContext {
-	return sctx.NewServiceContext(
+	opts := []sctx.Option{
 		sctx.WithName("Demo Microservices"),
 		sctx.WithComponent(ginc.NewGin(common.KeyCompGIN)),
 		sctx.WithComponent(gormc.NewGormDB(common.KeyCompMySQL, "")),
 		sctx.WithComponent(jwtc.NewJWT(common.KeyCompJWT)),
 		sctx.WithComponent(NewConfig()),
-	)
+	}
+
+	// Add MinIO component if configured
+	if minioComps := getMinioComponentIfConfigured(); minioComps != nil {
+		for _, comp := range minioComps {
+			opts = append(opts, sctx.WithComponent(comp))
+		}
+	}
+
+	return sctx.NewServiceContext(opts...)
 }
 
 var rootCmd = &cobra.Command{
@@ -72,33 +81,49 @@ var rootCmd = &cobra.Command{
 func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 
 	userAPIService := composer.ComposeUserAPIService(serviceCtx)
-	taskAPIService := composer.ComposeTaskAPIService(serviceCtx)
 	authAPIService := composer.ComposeAuthAPIService(serviceCtx)
 	chatbotAPIService := composer.ComposeChatbotAPIService(serviceCtx)
+	rbacAPIService := composer.ComposeRBACAPIService(serviceCtx)
 
 	requireAuthMdw := middleware.RequireAuth(composer.ComposeAuthRPCClient(serviceCtx))
 	rbacClient := composer.ComposeRBACClient(serviceCtx)
+	userStore := composer.ComposeUserStore(serviceCtx)
+	requireSuperAdminMdw := middleware.RequireSuperAdmin(userStore)
 
 	router.POST("/authenticate", authAPIService.LoginHdl())
 	router.POST("/register", authAPIService.RegisterHdl())
 	router.GET("/profile", requireAuthMdw, userAPIService.GetUserProfileHdl())
-
-	// Task permissions
-	// GET list/read -> task.read; POST -> task.create; PATCH -> task.update; DELETE -> task.delete
-	tasks := router.Group("/tasks", requireAuthMdw)
-	{
-		tasks.GET("", middleware.RequirePermissions(rbacClient, "task.read"), taskAPIService.ListTaskHdl())
-		tasks.POST("", middleware.RequirePermissions(rbacClient, "task.create"), taskAPIService.CreateTaskHdl())
-		tasks.GET("/:task-id", middleware.RequirePermissions(rbacClient, "task.read"), taskAPIService.GetTaskHdl())
-		tasks.PATCH("/:task-id", middleware.RequirePermissions(rbacClient, "task.update"), taskAPIService.UpdateTaskHdl())
-		tasks.DELETE("/:task-id", middleware.RequirePermissions(rbacClient, "task.delete"), taskAPIService.DeleteTaskHdl())
-	}
 
 	// Chat permissions (example codes: chat.send, chat.read)
 	chat := router.Group("/chatbot", requireAuthMdw)
 	{
 		chat.POST("/promt", middleware.RequirePermissions(rbacClient, "chat.send"), chatbotAPIService.SendMessageHandler())
 		chat.GET("/messages", middleware.RequirePermissions(rbacClient, "chat.read"), chatbotAPIService.ListMessagesHandler())
+	}
+
+	// RBAC Management (superadmin only)
+	// IMPORTANT: Routes are structured to avoid Gin wildcard conflicts
+	rbac := router.Group("/rbac", requireAuthMdw, requireSuperAdminMdw)
+	{
+		// Role management
+		rbac.POST("/roles", rbacAPIService.CreateRoleHdl())
+		rbac.GET("/roles", rbacAPIService.ListRolesHdl())
+		rbac.GET("/roles/:id", rbacAPIService.GetRoleWithPermissionsHdl())
+		rbac.PATCH("/roles/:id", rbacAPIService.UpdateRoleHdl())
+		rbac.DELETE("/roles/:id", rbacAPIService.DeleteRoleHdl())
+
+		// Permission management
+		rbac.POST("/permissions", rbacAPIService.CreatePermissionHdl())
+		rbac.GET("/permissions", rbacAPIService.ListPermissionsHdl())
+
+		// Role-Permission assignment (using 'role-permissions' to avoid conflicts)
+		rbac.POST("/role-permissions/:id", rbacAPIService.AssignPermissionsToRoleHdl())
+		rbac.DELETE("/role-permissions/:id/:permId", rbacAPIService.RemovePermissionFromRoleHdl())
+
+		// User-Role assignment (using 'user-roles' to avoid conflicts)
+		rbac.POST("/user-roles/:userId", rbacAPIService.AssignRolesToUserHdl())
+		rbac.GET("/user-roles/:userId", rbacAPIService.GetUserRolesHdl())
+		rbac.DELETE("/user-roles/:userId/:roleId", rbacAPIService.RemoveRoleFromUserHdl())
 	}
 }
 

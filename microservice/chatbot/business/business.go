@@ -18,13 +18,22 @@ type chatUsecase struct {
 	sql interface {
 		mysqlrepo.ConversationStore
 		mysqlrepo.MessageStore
+		mysqlrepo.AttachmentStore
 	}
-	ai rpcrepo.AIClient
+	ai      rpcrepo.AIClient
+	storage StorageProvider
 }
 
-func NewChatBusiness(sqlRepo *mysqlrepo.MySQLRepo, aiClient rpcrepo.AIClient) ChatUsecase {
+type StorageProvider interface {
+	UploadFile(ctx context.Context, objectName string, data []byte, contentType string) (string, error)
+	DownloadFile(ctx context.Context, objectName string) ([]byte, error)
+	DeleteFile(ctx context.Context, objectName string) error
+}
+
+func NewChatBusiness(sqlRepo *mysqlrepo.MySQLRepo, aiClient rpcrepo.AIClient, storage StorageProvider) ChatUsecase {
 	return &chatUsecase{
-		sql: sqlRepo,
-		ai:  aiClient,
+		sql:     sqlRepo,
+		ai:      aiClient,
+		storage: storage,
 	}
 }

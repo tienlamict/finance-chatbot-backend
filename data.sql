@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS roles (
 
 CREATE TABLE IF NOT EXISTS permissions (
   id          INT AUTO_INCREMENT PRIMARY KEY,
-  code        VARCHAR(128) NOT NULL UNIQUE, -- 'chat.send','chat.read','task.create',...
+  code        VARCHAR(128) NOT NULL UNIQUE, -- 'chat.send','chat.read','rbac.role.create',...
   name        VARCHAR(128) NOT NULL,
   description VARCHAR(255) NULL,
   created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -162,20 +162,49 @@ ON DUPLICATE KEY UPDATE name=VALUES(name);
 INSERT INTO permissions (code, name) VALUES
   ('chat.send','Chat: send message'),
   ('chat.read','Chat: read history'),
-  ('task.create','Task: create'),
-  ('task.update','Task: update'),
-  ('task.delete','Task: delete'),
-  ('task.read','Task: read')
+  ('rbac.role.create','RBAC: create role'),
+  ('rbac.role.read','RBAC: read roles'),
+  ('rbac.role.update','RBAC: update role'),
+  ('rbac.role.delete','RBAC: delete role'),
+  ('rbac.permission.create','RBAC: create permission'),
+  ('rbac.permission.read','RBAC: read permissions'),
+  ('rbac.permission.assign','RBAC: assign permissions to role'),
+  ('rbac.permission.revoke','RBAC: revoke permissions from role'),
+  ('rbac.user.assign','RBAC: assign roles to user'),
+  ('rbac.user.read','RBAC: read user roles')
 ON DUPLICATE KEY UPDATE name=VALUES(name);
 
 -- gán quyền mặc định cho role
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p
-WHERE r.code='user' AND p.code IN ('chat.send','chat.read','task.read');
+WHERE r.code='user' AND p.code IN ('chat.send','chat.read');
 
 INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM roles r JOIN permissions p
-WHERE r.code='admin' AND p.code IN ('chat.send','chat.read','task.read','task.create','task.update','task.delete');
+WHERE r.code='admin' AND p.code IN ('chat.send','chat.read');
+
+-- gán toàn bộ quyền cho sadmin
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+WHERE r.code='sadmin';
+
+-- ==== seed superadmin user ====
+-- Superadmin user (username: superadmin@system.local, password: superadmin)
+INSERT INTO users (first_name, last_name, email, system_role, status)
+VALUES ('Super', 'Admin', 'superadmin@system.local', 'sadmin', 'active')
+ON DUPLICATE KEY UPDATE system_role='sadmin', status='active';
+
+INSERT INTO auths (user_id, auth_type, email, salt, password)
+SELECT u.id, 'email_password', 'superadmin@system.local', '3a26a16b04b2b1d8a910be76629a5a59', '$2a$10$tlyeAdbG1E4Kqw9itIG/tOLmOI4NBbd5D4BU8OMkYs/lDFs6v4yU6'
+FROM users u WHERE u.email='superadmin@system.local'
+ON DUPLICATE KEY UPDATE salt=VALUES(salt), password=VALUES(password);
+
+-- gán role sadmin cho superadmin user
+INSERT IGNORE INTO user_roles (user_id, role_id)
+SELECT u.id, r.id
+FROM users u
+JOIN roles r ON r.code='sadmin'
+WHERE u.email='superadmin@system.local';
 
 -- map người dùng vào role 'user' 
 INSERT IGNORE INTO user_roles (user_id, role_id)
