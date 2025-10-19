@@ -6,12 +6,21 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+      minio:
+        condition: service_started
     environment:
       DB_DSN: "app_user:app_pass@tcp(mysql:3306)/finance_chatbot_db?charset=utf8mb4&parseTime=True&loc=Local"
       JWT_SECRET: "very-important-please-change-it!"
       GIN_PORT: "3001"
       GRPC_PORT: "3300"
       AI_PROTOCOL: = "mock"  # mock | grpc | rest
+      # MinIO/S3 Storage Configuration
+      MINIO_ENDPOINT: "minio:9000"
+      MINIO_ACCESS_KEY_ID: "minioadmin"
+      MINIO_SECRET_ACCESS_KEY: "minioadmin"
+      MINIO_USE_SSL: "false"
+      MINIO_BUCKET_NAME: "finance-chatbot-attachments"
+      MINIO_REGION: "us-east-1"
     ports:
       - "3001:3001"
     networks:
@@ -37,8 +46,29 @@ services:
     networks:
       - intranet
 
+  minio:
+    image: minio/minio:latest
+    container_name: finance-chatbot-minio
+    ports:
+      - "9000:9000"  # MinIO API
+      - "9001:9001"  # MinIO Console
+    environment:
+      MINIO_ROOT_USER: "minioadmin"
+      MINIO_ROOT_PASSWORD: "minioadmin"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - intranet
+
 networks:
   intranet:
 
 volumes:
   mysql-data: {}   # <-- KHAI BÁO named volume
+  minio-data: {}   # MinIO storage volume

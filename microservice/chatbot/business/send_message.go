@@ -3,9 +3,12 @@ package business
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	"finance-chatbot/addon/common"
 	idgen "finance-chatbot/addon/common"
+	minioc "finance-chatbot/addon/component/minioc"
 	"finance-chatbot/microservice/chatbot/entity"
 )
 
@@ -53,6 +56,15 @@ func (uc *chatUsecase) SendMessage(ctx context.Context, req entity.SendMessageRe
 		return nil, err
 	}
 
+	// 1.5) Process and store attachments if any
+	var attachments []*entity.MessageAttachment
+	if len(req.Files) > 0 {
+		attachments, err = uc.processAttachments(ctx, userMsg.ID, userID, req.Files)
+		if err != nil {
+			return nil, fmt.Errorf("failed to process attachments: %w", err)
+		}
+	}
+
 	// 2) Gọi AI service
 	start := time.Now()
 	aiRes, err := uc.ai.Generate(ctx, userID, convID, req.Content)
@@ -93,6 +105,20 @@ func (uc *chatUsecase) SendMessage(ctx context.Context, req entity.SendMessageRe
 		return nil, err
 	}
 
+	// Convert attachments to DTOs
+	attachmentDTOs := make([]entity.AttachmentDTO, len(attachments))
+	for i, att := range attachments {
+		attachmentDTOs[i] = entity.AttachmentDTO{
+			ID:         att.ID,
+			Filename:   att.Filename,
+			MimeType:   *att.MimeType,
+			SHA256:     *att.SHA256,
+			Pages:      att.Pages,
+			CreatedAt:  att.CreatedAt,
+			StorageKey: att.StorageKey,
+		}
+	}
+
 	return &entity.SendMessageResponse{
 		ConversationID:       convID,
 		UserMessageID:        userMsg.ID,
@@ -104,5 +130,48 @@ func (uc *chatUsecase) SendMessage(ctx context.Context, req entity.SendMessageRe
 		LatencyMs:            latency,
 		UserMessageCreatedAt: userMsg.CreatedAt,
 		AIMessageCreatedAt:   assistantMsg.CreatedAt,
+		Attachments:          attachmentDTOs,
 	}, nil
+}
+
+// processAttachments handles file uploads and creates attachment records
+func (uc *chatUsecase) processAttachments(ctx context.Context, messageID, userID string, files []entity.FileUploadInfo) ([]*entity.MessageAttachment, error) {
+	if uc.storage == nil {
+		return nil, fmt.Errorf("storage provider not configured")
+	}
+
+	attachments := make([]*entity.MessageAttachment, 0, len(files))
+
+	for _, fileInfo := range files {
+		// Generate storage key
+		storageKey := minioc.GenerateStorageKey(userID, messageID, fileInfo.FileHeader.Filename)
+
+		// Upload file to object storage
+		finalStorageKey, err := uc.storage.UploadFile(ctx, storageKey, fileInfo.Content, fileInfo.MimeType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to upload file %s: %w", fileInfo.FileHeader.Filename, err)
+		}
+
+		// Create attachment record
+		attachment := &entity.MessageAttachment{
+			ID:         idgen.NewV7(),
+			MessageID:  messageID,
+			Filename:   common.SanitizeFilename(fileInfo.FileHeader.Filename),
+			StorageKey: finalStorageKey,
+			MimeType:   &fileInfo.MimeType,
+			SHA256:     &fileInfo.SHA256Hash,
+			Pages:      fileInfo.Pages,
+			CreatedAt:  time.Now(),
+		}
+
+		if err := uc.sql.CreateAttachment(ctx, attachment); err != nil {
+			// Attempt to delete uploaded file on DB error
+			_ = uc.storage.DeleteFile(ctx, storageKey)
+			return nil, fmt.Errorf("failed to save attachment record: %w", err)
+		}
+
+		attachments = append(attachments, attachment)
+	}
+
+	return attachments, nil
 }

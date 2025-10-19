@@ -68,3 +68,11 @@ func checkStatus(s Status) error {
 
 	return nil
 }
+
+func checkPassword(s string) error {
+	if len(s) < 8 || len(s) > 30 {
+		return ErrPasswordIsNotValid
+	}
+
+	return nil
+}

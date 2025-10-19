@@ -10,12 +10,8 @@ import (
 	authRPC "finance-chatbot/microservice/auth/transport/rpc"
 	"os"
 
-	taskBusiness "finance-chatbot/microservice/task/business"
-	taskSQLRepository "finance-chatbot/microservice/task/repository/mysql"
-	taskUserRPC "finance-chatbot/microservice/task/repository/rpc"
-	taskAPI "finance-chatbot/microservice/task/transport/api"
-
 	userBusiness "finance-chatbot/microservice/user/business"
+	"finance-chatbot/microservice/user/entity"
 	userSQLRepository "finance-chatbot/microservice/user/repository/mysql"
 	userApi "finance-chatbot/microservice/user/transport/api"
 	userRPC "finance-chatbot/microservice/user/transport/rpc"
@@ -30,15 +26,9 @@ import (
 	"finance-chatbot/proto/pb"
 
 	sctx "finance-chatbot/addon/sctx"
-)
 
-type TaskService interface {
-	CreateTaskHdl() func(*gin.Context)
-	GetTaskHdl() func(*gin.Context)
-	ListTaskHdl() func(*gin.Context)
-	UpdateTaskHdl() func(*gin.Context)
-	DeleteTaskHdl() func(*gin.Context)
-}
+	"gorm.io/gorm"
+)
 
 type UserService interface {
 	GetUserProfileHdl() func(*gin.Context)
@@ -54,6 +44,36 @@ type ChatbotService interface {
 	ListMessagesHandler() func(*gin.Context)
 }
 
+type RBACService interface {
+	// Role management
+	CreateRoleHdl() func(*gin.Context)
+	ListRolesHdl() func(*gin.Context)
+	GetRoleWithPermissionsHdl() func(*gin.Context)
+	UpdateRoleHdl() func(*gin.Context)
+	DeleteRoleHdl() func(*gin.Context)
+
+	// Permission management
+	CreatePermissionHdl() func(*gin.Context)
+	ListPermissionsHdl() func(*gin.Context)
+
+	// Role-Permission assignment
+	AssignPermissionsToRoleHdl() func(*gin.Context)
+	RemovePermissionFromRoleHdl() func(*gin.Context)
+
+	// User-Role assignment
+	AssignRolesToUserHdl() func(*gin.Context)
+	GetUserRolesHdl() func(*gin.Context)
+	RemoveRoleFromUserHdl() func(*gin.Context)
+}
+
+type AdminUserService interface {
+	CreateUserHdl() func(*gin.Context)
+	UpdateUserHdl() func(*gin.Context)
+	DeleteUserHdl() func(*gin.Context)
+	ListUsersHdl() func(*gin.Context)
+	GetUserByIDHdl() func(*gin.Context)
+}
+
 func ComposeUserAPIService(serviceCtx sctx.ServiceContext) UserService {
 	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
 
@@ -62,34 +82,6 @@ func ComposeUserAPIService(serviceCtx sctx.ServiceContext) UserService {
 	userService := userApi.NewAPI(biz)
 
 	return userService
-}
-
-// Đây là một hàm factory, nhận vào ServiceContext (container chứa các dependency chung như DB, logger, config…)
-// Trả về một TaskService (tức API service của module task)
-func ComposeTaskAPIService(serviceCtx sctx.ServiceContext) TaskService {
-	// Lấy component kết nối MySQL từ serviceCtx
-	// Ép kiểu về GormComponent để sử dụng GORM
-	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
-
-	// Tạo client RPC để gọi sang User microservice
-	// Hàm composeUserRPCClient được định nghĩa trong cùng package composer
-	// composeUserRPCClient sẽ dựng kết nối gRPC tới service user, sau đó taskUserRPC.NewClient(...) bọc lại thành client chuyên biệt.
-	userClient := taskUserRPC.NewClient(composeUserRPCClient(serviceCtx))
-
-	// Tạo repository layer cho task, implement bằng MySQL.
-	// db.GetDB() trả về con trỏ *gorm.DB và được wrap trong taskSQLRepository.
-	taskRepo := taskSQLRepository.NewMySQLRepository(db.GetDB())
-
-	// Tạo business/usecase layer cho task.
-	// biz sẽ chứa logic chính: tạo task, xoá, update…
-	// Nó phụ thuộc vào taskRepo (đọc/ghi DB) và userClient (gọi sang user service để xác thực/kiểm tra user).
-	biz := taskBusiness.NewBusiness(taskRepo, userClient)
-
-	// Tạo transport layer cho task (HTTP/gRPC handler).
-	// taskAPI.NewAPI nhận biz để xử lý request, đồng thời dùng serviceCtx để đăng ký middleware/logging…
-	serviceAPI := taskAPI.NewAPI(serviceCtx, biz)
-
-	return serviceAPI
 }
 
 func ComposeAuthAPIService(serviceCtx sctx.ServiceContext) AuthService {
@@ -128,6 +120,44 @@ func ComposeRBACClient(serviceCtx sctx.ServiceContext) *rbacClient {
 	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
 	repo := userSQLRepository.NewRBACRepository(db.GetDB())
 	return &rbacClient{repo: repo}
+}
+
+// userStoreAdapter is a simpler adapter that directly uses the repo's methods
+type userStoreAdapter struct {
+	db *gorm.DB
+}
+
+func (w *userStoreAdapter) GetUserByID(ctx context.Context, userID int) (*entity.User, error) {
+	repo := userSQLRepository.NewMySQLRepository(w.db)
+	return repo.GetUserById(ctx, userID)
+}
+
+func ComposeUserStore(serviceCtx sctx.ServiceContext) *userStoreAdapter {
+	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+	return &userStoreAdapter{db: db.GetDB()}
+}
+
+func ComposeRBACAPIService(serviceCtx sctx.ServiceContext) RBACService {
+	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+
+	rbacStore := userSQLRepository.NewRBACStore(db.GetDB())
+	biz := userBusiness.NewRBACBusiness(rbacStore)
+	serviceAPI := userApi.NewRBACAPI(biz)
+
+	return serviceAPI
+}
+
+func ComposeAdminUserAPIService(serviceCtx sctx.ServiceContext) AdminUserService {
+	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+	hasher := new(common.Hasher)
+
+	userRepo := userSQLRepository.NewMySQLRepository(db.GetDB())
+	authRepo := userSQLRepository.NewAdminAuthRepository(db.GetDB())
+	passwordBiz := userBusiness.NewAdminUserPasswordBusiness(userRepo, authRepo, hasher)
+	biz := userBusiness.NewAdminUserBusiness(userRepo, passwordBiz)
+	serviceAPI := userApi.NewAdminUserAPI(biz)
+
+	return serviceAPI
 }
 
 func ComposeUserGRPCService(serviceCtx sctx.ServiceContext) pb.UserServiceServer {
@@ -174,8 +204,14 @@ func ComposeChatbotAPIService(serviceCtx sctx.ServiceContext) ChatbotService {
 
 	aiClient := chooseAIClient(serviceCtx) // REST/gRPC
 
+	// Get storage component (MinIO/S3) if available
+	var storage common.StorageProvider
+	if storageComp, ok := serviceCtx.Get(common.KeyCompStorage); ok {
+		storage = storageComp.(common.StorageProvider)
+	}
+
 	sqlRepo := chatmysql.NewMySQLRepo(gormDB)
-	biz := chatBusiness.NewChatBusiness(sqlRepo, aiClient)
+	biz := chatBusiness.NewChatBusiness(sqlRepo, aiClient, storage)
 	api := chatAPI.NewAPI(biz)
 	return api
 }

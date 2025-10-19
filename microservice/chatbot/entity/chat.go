@@ -64,19 +64,22 @@ type SendMessageRequest struct {
 	// Optional: OrgID, Title lần đầu tạo conv
 	OrgID *string `json:"org_id,omitempty"`
 	Title *string `json:"title,omitempty"`
+	// Files uploaded with the message (populated in transport layer)
+	Files []FileUploadInfo `json:"-"`
 }
 
 type SendMessageResponse struct {
-	ConversationID       string    `json:"conversation_id"`
-	UserMessageID        string    `json:"user_message_id"`
-	AssistantMessageID   string    `json:"assistant_message_id"`
-	AssistantContent     string    `json:"assistant_content"`
-	ModelName            string    `json:"model_name,omitempty"`
-	TokensInput          int       `json:"tokens_input"`
-	TokensOutput         int       `json:"tokens_output"`
-	LatencyMs            int       `json:"latency_ms"`
-	UserMessageCreatedAt time.Time `json:"user_message_created_at"`
-	AIMessageCreatedAt   time.Time `json:"ai_message_created_at"`
+	ConversationID       string          `json:"conversation_id"`
+	UserMessageID        string          `json:"user_message_id"`
+	AssistantMessageID   string          `json:"assistant_message_id"`
+	AssistantContent     string          `json:"assistant_content"`
+	ModelName            string          `json:"model_name,omitempty"`
+	TokensInput          int             `json:"tokens_input"`
+	TokensOutput         int             `json:"tokens_output"`
+	LatencyMs            int             `json:"latency_ms"`
+	UserMessageCreatedAt time.Time       `json:"user_message_created_at"`
+	AIMessageCreatedAt   time.Time       `json:"ai_message_created_at"`
+	Attachments          []AttachmentDTO `json:"attachments,omitempty"`
 }
 
 type ListMessagesRequest struct {

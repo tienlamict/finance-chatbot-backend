@@ -13,3 +13,7 @@ func SuccessResponse(data, paging, extra interface{}) *successResponse {
 func ResponseData(data interface{}) *successResponse {
 	return SuccessResponse(data, nil, nil)
 }
+
+func SimpleSuccessResponse(success bool) *successResponse {
+	return ResponseData(map[string]bool{"success": success})
+}

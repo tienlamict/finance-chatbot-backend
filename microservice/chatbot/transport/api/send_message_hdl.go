@@ -26,16 +26,29 @@ func (a *API) resolveUserID(c *gin.Context, fallback string) string {
 
 func (a *API) SendMessageHandler() func(*gin.Context) {
 	return func(c *gin.Context) {
+		// Check content type - support both JSON and multipart/form-data
+		contentType := c.ContentType()
+
 		var req entity.SendMessageRequest
-		if err := c.ShouldBindJSON(&req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-			return
+		var err error
+
+		if contentType == "application/json" {
+			// JSON request without files
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+		} else {
+			// Multipart form data with possible file uploads
+			req, err = a.parseMultipartRequest(c)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 		}
+
 		userID := a.resolveUserID(c, req.UserID)
-		if userID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing user_id (from auth context or request body)"})
-			return
-		}
+		// No need to check UserID - allow empty userID
 
 		res, err := a.uc.SendMessage(c.Request.Context(), req, userID)
 		if err != nil {
