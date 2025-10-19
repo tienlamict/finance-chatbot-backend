@@ -235,11 +235,13 @@ func (api *rbacAPI) RemovePermissionFromRoleHdl() func(c *gin.Context) {
 // POST /api/v1/rbac/users/:userId/roles
 func (api *rbacAPI) AssignRolesToUserHdl() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		userID, err := strconv.Atoi(c.Param("userId"))
+		// Decode base58 UID to real user ID
+		uid, err := core.FromBase58(c.Param("userId"))
 		if err != nil {
-			common.WriteErrorResponse(c, core.ErrBadRequest.WithError("invalid user ID"))
+			common.WriteErrorResponse(c, core.ErrBadRequest.WithError("invalid user ID format"))
 			return
 		}
+		userID := int(uid.GetLocalID())
 
 		var req entity.AssignRolesRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -260,11 +262,13 @@ func (api *rbacAPI) AssignRolesToUserHdl() func(c *gin.Context) {
 // GET /api/v1/rbac/users/:userId/roles
 func (api *rbacAPI) GetUserRolesHdl() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		userID, err := strconv.Atoi(c.Param("userId"))
+		// Decode base58 UID to real user ID
+		uid, err := core.FromBase58(c.Param("userId"))
 		if err != nil {
-			common.WriteErrorResponse(c, core.ErrBadRequest.WithError("invalid user ID"))
+			common.WriteErrorResponse(c, core.ErrBadRequest.WithError("invalid user ID format"))
 			return
 		}
+		userID := int(uid.GetLocalID())
 
 		userRoles, err := api.business.GetUserRoles(c.Request.Context(), userID)
 		if err != nil {
@@ -280,12 +284,15 @@ func (api *rbacAPI) GetUserRolesHdl() func(c *gin.Context) {
 // DELETE /api/v1/rbac/users/:userId/roles/:roleId
 func (api *rbacAPI) RemoveRoleFromUserHdl() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		userID, err := strconv.Atoi(c.Param("userId"))
+		// Decode base58 UID to real user ID
+		uid, err := core.FromBase58(c.Param("userId"))
 		if err != nil {
-			common.WriteErrorResponse(c, core.ErrBadRequest.WithError("invalid user ID"))
+			common.WriteErrorResponse(c, core.ErrBadRequest.WithError("invalid user ID format"))
 			return
 		}
+		userID := int(uid.GetLocalID())
 
+		// Role IDs are plain integers, not encoded
 		roleID, err := strconv.Atoi(c.Param("roleId"))
 		if err != nil {
 			common.WriteErrorResponse(c, core.ErrBadRequest.WithError("invalid role ID"))

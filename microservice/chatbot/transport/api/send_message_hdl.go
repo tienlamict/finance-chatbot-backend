@@ -48,10 +48,7 @@ func (a *API) SendMessageHandler() func(*gin.Context) {
 		}
 
 		userID := a.resolveUserID(c, req.UserID)
-		if userID == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing user_id (from auth context or request body)"})
-			return
-		}
+		// No need to check UserID - allow empty userID
 
 		res, err := a.uc.SendMessage(c.Request.Context(), req, userID)
 		if err != nil {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"finance-chatbot/addon/sctx"
@@ -135,5 +136,36 @@ func (m *MinioComponent) GetPresignedURL(ctx context.Context, objectName string,
 func GenerateStorageKey(userID, messageID, filename string) string {
 	timestamp := time.Now().UnixNano()
 	ext := filepath.Ext(filename)
-	return fmt.Sprintf("attachments/%s/%s/%d%s", userID, messageID, timestamp, ext)
+
+	// Sanitize path components to avoid unsupported characters
+	sanitizedUserID := sanitizeStoragePath(userID)
+	sanitizedMessageID := sanitizeStoragePath(messageID)
+
+	return fmt.Sprintf("attachments/%s/%s/%d%s", sanitizedUserID, sanitizedMessageID, timestamp, ext)
+}
+
+// sanitizeStoragePath removes or replaces characters that are not allowed in storage paths
+func sanitizeStoragePath(path string) string {
+	// Replace problematic characters with underscores
+	path = strings.ReplaceAll(path, "/", "_")
+	path = strings.ReplaceAll(path, "\\", "_")
+	path = strings.ReplaceAll(path, "..", "_")
+	path = strings.ReplaceAll(path, " ", "_")
+	path = strings.ReplaceAll(path, ":", "_")
+	path = strings.ReplaceAll(path, "*", "_")
+	path = strings.ReplaceAll(path, "?", "_")
+	path = strings.ReplaceAll(path, "\"", "_")
+	path = strings.ReplaceAll(path, "<", "_")
+	path = strings.ReplaceAll(path, ">", "_")
+	path = strings.ReplaceAll(path, "|", "_")
+
+	// Remove leading/trailing dots and spaces
+	path = strings.Trim(path, ". ")
+
+	// Ensure path is not empty
+	if path == "" {
+		path = "default"
+	}
+
+	return path
 }

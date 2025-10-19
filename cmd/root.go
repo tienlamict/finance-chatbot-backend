@@ -84,6 +84,7 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 	authAPIService := composer.ComposeAuthAPIService(serviceCtx)
 	chatbotAPIService := composer.ComposeChatbotAPIService(serviceCtx)
 	rbacAPIService := composer.ComposeRBACAPIService(serviceCtx)
+	adminUserAPIService := composer.ComposeAdminUserAPIService(serviceCtx)
 
 	requireAuthMdw := middleware.RequireAuth(composer.ComposeAuthRPCClient(serviceCtx))
 	rbacClient := composer.ComposeRBACClient(serviceCtx)
@@ -99,6 +100,18 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 	{
 		chat.POST("/promt", middleware.RequirePermissions(rbacClient, "chat.send"), chatbotAPIService.SendMessageHandler())
 		chat.GET("/messages", middleware.RequirePermissions(rbacClient, "chat.read"), chatbotAPIService.ListMessagesHandler())
+	}
+
+	// Admin User Management (admin/superadmin only)
+	admin := router.Group("/admin", requireAuthMdw, requireSuperAdminMdw)
+	{
+		// User CRUD operations
+		admin.POST("/users", adminUserAPIService.CreateUserHdl())
+		admin.GET("/users", adminUserAPIService.ListUsersHdl())
+		admin.GET("/users/:id", adminUserAPIService.GetUserByIDHdl())
+		admin.PUT("/users/:id", adminUserAPIService.UpdateUserHdl())
+		admin.PATCH("/users/:id", adminUserAPIService.UpdateUserHdl())
+		admin.DELETE("/users/:id", adminUserAPIService.DeleteUserHdl())
 	}
 
 	// RBAC Management (superadmin only)

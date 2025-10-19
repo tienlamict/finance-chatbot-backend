@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"finance-chatbot/addon/core"
 	"finance-chatbot/microservice/user/entity"
 	"net/http"
 	"net/http/httptest"
@@ -296,8 +297,12 @@ func TestAssignRolesToUserAPI(t *testing.T) {
 		RoleIDs: []int{1, 2},
 	}
 
+	// Create encoded UID for user ID = 1
+	uid := core.NewUID(uint32(1), 1, 1)
+	encodedUserID := uid.String()
+
 	body, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest(http.MethodPost, "/v1/rbac/user-roles/1", bytes.NewBuffer(body))
+	req, _ := http.NewRequest(http.MethodPost, "/v1/rbac/user-roles/"+encodedUserID, bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -311,7 +316,11 @@ func TestGetUserRolesAPI(t *testing.T) {
 	api := NewRBACAPI(mockBiz)
 	router := setupTestRouter(api)
 
-	req, _ := http.NewRequest(http.MethodGet, "/v1/rbac/user-roles/1", nil)
+	// Create encoded UID for user ID = 1
+	uid := core.NewUID(uint32(1), 1, 1)
+	encodedUserID := uid.String()
+
+	req, _ := http.NewRequest(http.MethodGet, "/v1/rbac/user-roles/"+encodedUserID, nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 

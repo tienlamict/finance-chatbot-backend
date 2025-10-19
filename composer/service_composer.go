@@ -66,6 +66,14 @@ type RBACService interface {
 	RemoveRoleFromUserHdl() func(*gin.Context)
 }
 
+type AdminUserService interface {
+	CreateUserHdl() func(*gin.Context)
+	UpdateUserHdl() func(*gin.Context)
+	DeleteUserHdl() func(*gin.Context)
+	ListUsersHdl() func(*gin.Context)
+	GetUserByIDHdl() func(*gin.Context)
+}
+
 func ComposeUserAPIService(serviceCtx sctx.ServiceContext) UserService {
 	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
 
@@ -135,6 +143,19 @@ func ComposeRBACAPIService(serviceCtx sctx.ServiceContext) RBACService {
 	rbacStore := userSQLRepository.NewRBACStore(db.GetDB())
 	biz := userBusiness.NewRBACBusiness(rbacStore)
 	serviceAPI := userApi.NewRBACAPI(biz)
+
+	return serviceAPI
+}
+
+func ComposeAdminUserAPIService(serviceCtx sctx.ServiceContext) AdminUserService {
+	db := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+	hasher := new(common.Hasher)
+
+	userRepo := userSQLRepository.NewMySQLRepository(db.GetDB())
+	authRepo := userSQLRepository.NewAdminAuthRepository(db.GetDB())
+	passwordBiz := userBusiness.NewAdminUserPasswordBusiness(userRepo, authRepo, hasher)
+	biz := userBusiness.NewAdminUserBusiness(userRepo, passwordBiz)
+	serviceAPI := userApi.NewAdminUserAPI(biz)
 
 	return serviceAPI
 }
