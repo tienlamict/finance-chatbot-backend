@@ -1,19 +1,19 @@
 package entity
 
 type Role struct {
-	ID          int    `gorm:"column:id;primaryKey"`
-	Code        string `gorm:"column:code"`
-	Name        string `gorm:"column:name"`
-	Description string `gorm:"column:description"`
+	ID          int    `json:"id" gorm:"column:id;primaryKey"`
+	Code        string `json:"code" gorm:"column:code"`
+	Name        string `json:"name" gorm:"column:name"`
+	Description string `json:"description" gorm:"column:description"`
 }
 
 func (Role) TableName() string { return "roles" }
 
 type Permission struct {
-	ID          int    `gorm:"column:id;primaryKey"`
-	Code        string `gorm:"column:code"`
-	Name        string `gorm:"column:name"`
-	Description string `gorm:"column:description"`
+	ID          int    `json:"id" gorm:"column:id;primaryKey"`
+	Code        string `json:"code" gorm:"column:code"`
+	Name        string `json:"name" gorm:"column:name"`
+	Description string `json:"description" gorm:"column:description"`
 }
 
 func (Permission) TableName() string { return "permissions" }
