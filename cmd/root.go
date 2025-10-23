@@ -62,6 +62,9 @@ var rootCmd = &cobra.Command{
 		router := ginComp.GetRouter()
 		router.Use(gin.Recovery(), gin.Logger(), smdlw.Recovery(serviceCtx))
 
+		// Add CORS middleware
+		router.Use(middleware.CORSMiddleware())
+
 		router.GET("/ping", func(c *gin.Context) {
 			c.JSON(http.StatusOK, gin.H{"data": "pong"})
 		})
