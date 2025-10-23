@@ -42,6 +42,11 @@ type AuthService interface {
 type ChatbotService interface {
 	SendMessageHandler() func(*gin.Context)
 	ListMessagesHandler() func(*gin.Context)
+
+	// Enhanced conversation history handlers
+	GetConversationHistoryHandler() func(*gin.Context)
+	GetConversationSummaryHandler() func(*gin.Context)
+	GetUserConversationsHandler() func(*gin.Context)
 }
 
 type RBACService interface {

@@ -93,3 +93,69 @@ type ListMessagesResponse struct {
 	Total          int64     `json:"total"`
 	Items          []Message `json:"items"`
 }
+
+// Enhanced conversation history request with advanced filtering
+type ConversationHistoryRequest struct {
+	ConversationID     string     `form:"conversation_id" json:"conversation_id" binding:"required"`
+	Limit              int        `form:"limit,default=20" json:"limit"`
+	Before             *string    `form:"before" json:"before,omitempty"` // message ID or timestamp
+	After              *string    `form:"after" json:"after,omitempty"`   // message ID or timestamp
+	From               *time.Time `form:"from" json:"from,omitempty"`     // ISO 8601 timestamp
+	To                 *time.Time `form:"to" json:"to,omitempty"`         // ISO 8601 timestamp
+	Order              string     `form:"order,default=asc" json:"order"` // asc | desc
+	Search             *string    `form:"search" json:"search,omitempty"` // keyword search
+	IncludeAttachments bool       `form:"include_attachments,default=true" json:"include_attachments"`
+}
+
+// Enhanced conversation history response with pagination info
+type ConversationHistoryResponse struct {
+	ConversationID string                   `json:"conversation_id"`
+	Total          int64                    `json:"total"`
+	Items          []MessageWithAttachments `json:"items"`
+	HasMore        bool                     `json:"has_more"`
+	NextCursor     *string                  `json:"next_cursor,omitempty"`
+	PreviousCursor *string                  `json:"previous_cursor,omitempty"`
+}
+
+// Message with attachments for response
+type MessageWithAttachments struct {
+	Message
+	Attachments []AttachmentDTO `json:"attachments,omitempty"`
+}
+
+// User conversations list request
+type UserConversationsRequest struct {
+	UserID             string     `form:"user_id" json:"user_id" binding:"required"`
+	Limit              int        `form:"limit,default=20" json:"limit"`
+	Offset             int        `form:"offset,default=0" json:"offset"`
+	Status             *string    `form:"status" json:"status,omitempty"` // active, archived, deleted
+	From               *time.Time `form:"from" json:"from,omitempty"`
+	To                 *time.Time `form:"to" json:"to,omitempty"`
+	Search             *string    `form:"search" json:"search,omitempty"`
+	IncludeLastMessage bool       `form:"include_last_message,default=true" json:"include_last_message"`
+}
+
+// User conversations list response
+type UserConversationsResponse struct {
+	UserID     string                `json:"user_id"`
+	Total      int64                 `json:"total"`
+	Items      []ConversationSummary `json:"items"`
+	HasMore    bool                  `json:"has_more"`
+	NextOffset int                   `json:"next_offset"`
+}
+
+// Conversation summary with last message preview
+type ConversationSummary struct {
+	Conversation
+	LastMessage   *MessagePreview `json:"last_message,omitempty"`
+	UnreadCount   int             `json:"unread_count"`
+	TotalMessages int64           `json:"total_messages"`
+}
+
+// Message preview for conversation list
+type MessagePreview struct {
+	ID        string      `json:"id"`
+	Role      MessageRole `json:"role"`
+	Content   *string     `json:"content,omitempty"`
+	CreatedAt time.Time   `json:"created_at"`
+}

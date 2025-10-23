@@ -12,6 +12,11 @@ import (
 type ChatUsecase interface {
 	SendMessage(ctx context.Context, req entity.SendMessageRequest, userID string) (*entity.SendMessageResponse, error)
 	ListMessages(ctx context.Context, req entity.ListMessagesRequest) (*entity.ListMessagesResponse, error)
+
+	// Enhanced conversation history methods
+	GetConversationHistory(ctx context.Context, req entity.ConversationHistoryRequest, userID string) (*entity.ConversationHistoryResponse, error)
+	GetUserConversations(ctx context.Context, req entity.UserConversationsRequest, requestingUserID string) (*entity.UserConversationsResponse, error)
+	GetConversationSummary(ctx context.Context, conversationID, userID string) (*entity.ConversationSummary, error)
 }
 
 type chatUsecase struct {

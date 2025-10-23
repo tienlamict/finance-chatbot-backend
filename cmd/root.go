@@ -103,6 +103,11 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 	{
 		chat.POST("/promt", middleware.RequirePermissions(rbacClient, "chat.send"), chatbotAPIService.SendMessageHandler())
 		chat.GET("/messages", middleware.RequirePermissions(rbacClient, "chat.read"), chatbotAPIService.ListMessagesHandler())
+
+		// Enhanced conversation history endpoints
+		chat.GET("/conversations/:conversationId/messages", middleware.RequirePermissions(rbacClient, "chat.read"), chatbotAPIService.GetConversationHistoryHandler())
+		chat.GET("/conversations/:conversationId", middleware.RequirePermissions(rbacClient, "chat.read"), chatbotAPIService.GetConversationSummaryHandler())
+		chat.GET("/users/:userId/conversations", middleware.RequirePermissions(rbacClient, "chat.read"), chatbotAPIService.GetUserConversationsHandler())
 	}
 
 	// Admin User Management (admin/superadmin only)
