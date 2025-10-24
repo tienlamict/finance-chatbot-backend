@@ -101,7 +101,7 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 	// Chat permissions (example codes: chat.send, chat.read)
 	chat := router.Group("/chatbot", requireAuthMdw)
 	{
-		chat.POST("/promt", middleware.RequirePermissions(rbacClient, "chat.send"), chatbotAPIService.SendMessageHandler())
+		chat.POST("/prompt", middleware.RequirePermissions(rbacClient, "chat.send"), chatbotAPIService.SendMessageHandler())
 		chat.GET("/messages", middleware.RequirePermissions(rbacClient, "chat.read"), chatbotAPIService.ListMessagesHandler())
 
 		// Enhanced conversation history endpoints

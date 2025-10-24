@@ -6,22 +6,26 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"finance-chatbot/addon/common"
+	"finance-chatbot/addon/core"
 	"finance-chatbot/microservice/chatbot/entity"
 )
 
 func (a *API) resolveUserID(c *gin.Context, fallback string) string {
-	// Ưu tiên: lấy từ middleware auth nếu có
-	// Tuỳ hệ thống bạn đang set vào key nào:
-	if v, ok := c.Get("user_id"); ok {
-		if s, ok2 := v.(string); ok2 && s != "" {
-			return s
+	// Extract user ID from authentication context (JWT token)
+	if requester, ok := c.Get(core.KeyRequester); ok {
+		if req, ok2 := requester.(core.Requester); ok2 {
+			// The subject from the requester contains the user ID
+			return req.GetSubject()
 		}
 	}
-	// Header tạm thời (nếu chưa có auth middleware)
+	// Fallback to header if no auth context (for development/testing)
 	if s := c.GetHeader("X-User-Id"); s != "" {
 		return s
 	}
-	return fallback
+	// Note: fallback parameter (client-provided user_id) is ignored for security
+	// User ID must come from authenticated context
+	return ""
 }
 
 func (a *API) SendMessageHandler() func(*gin.Context) {
@@ -48,7 +52,11 @@ func (a *API) SendMessageHandler() func(*gin.Context) {
 		}
 
 		userID := a.resolveUserID(c, req.UserID)
-		// No need to check UserID - allow empty userID
+		// UserID is now extracted from authentication context
+		if userID == "" {
+			common.WriteErrorResponse(c, core.ErrUnauthorized.WithError("user ID is required"))
+			return
+		}
 
 		res, err := a.uc.SendMessage(c.Request.Context(), req, userID)
 		if err != nil {

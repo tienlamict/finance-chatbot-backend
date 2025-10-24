@@ -19,13 +19,14 @@ func (uc *chatUsecase) GetConversationHistory(ctx context.Context, req entity.Co
 	}
 
 	// Check conversation access
-	hasAccess, err := uc.sql.CheckConversationAccess(ctx, req.ConversationID, userID)
+	//hasAccess, err := uc.sql.CheckConversationAccess(ctx, req.ConversationID, userID)
+	_, err := uc.sql.CheckConversationAccess(ctx, req.ConversationID, userID)
 	if err != nil {
 		return nil, core.ErrInternalServerError.WithDebug(err.Error())
 	}
-	if !hasAccess {
-		return nil, core.ErrForbidden.WithError("access denied to conversation")
-	}
+	// if !hasAccess {
+	// 	return nil, core.ErrForbidden.WithError("access denied to conversation")
+	// }
 
 	// Get conversation info
 	_, err = uc.sql.FindByID(ctx, req.ConversationID)
@@ -77,7 +78,12 @@ func (uc *chatUsecase) GetUserConversations(ctx context.Context, req entity.User
 	}
 
 	// Check if user can access conversations (self or admin)
-	if req.UserID != requestingUserID {
+	uid, _ := core.FromBase58(req.UserID)
+
+	struserID := strconv.Itoa(int(uid.GetLocalID()))
+	if struserID != requestingUserID {
+		fmt.Println("Requesting user ID:", requestingUserID)
+		fmt.Println("Target user ID:", struserID)
 		// TODO: Add admin/superadmin check here
 		// For now, only allow self-access
 		return nil, core.ErrForbidden.WithError("access denied to user conversations")

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"finance-chatbot/addon/common"
-	idgen "finance-chatbot/addon/common"
 	minioc "finance-chatbot/addon/component/minioc"
 	"finance-chatbot/microservice/chatbot/entity"
 )
@@ -20,8 +19,14 @@ func (uc *chatUsecase) ensureConversation(ctx context.Context, req entity.SendMe
 		}
 		// Nếu không tìm thấy thì fallback tạo mới
 	}
+
+	// Validate userID is not empty when creating new conversation
+	if userID == "" {
+		return "", fmt.Errorf("user ID is required to create a new conversation")
+	}
+
 	conv := &entity.Conversation{
-		ID:        idgen.NewV7(),
+		ID:        common.NewV7(),
 		UserID:    userID,
 		OrgID:     req.OrgID,
 		Title:     req.Title,
@@ -45,7 +50,7 @@ func (uc *chatUsecase) SendMessage(ctx context.Context, req entity.SendMessageRe
 	now := time.Now()
 	content := req.Content
 	userMsg := &entity.Message{
-		ID:             idgen.NewV7(),
+		ID:             common.NewV7(),
 		ConversationID: convID,
 		Role:           entity.RoleUser,
 		Content:        &content,
@@ -73,7 +78,7 @@ func (uc *chatUsecase) SendMessage(ctx context.Context, req entity.SendMessageRe
 		// Lưu 1 message assistant báo lỗi (optional)
 		errCode := "ai_generate_error"
 		msg := &entity.Message{
-			ID:             idgen.NewV7(),
+			ID:             common.NewV7(),
 			ConversationID: convID,
 			Role:           entity.RoleAssistant,
 			Content:        nil,
@@ -90,7 +95,7 @@ func (uc *chatUsecase) SendMessage(ctx context.Context, req entity.SendMessageRe
 	assistantContent := aiRes.Content
 	model := aiRes.Model
 	assistantMsg := &entity.Message{
-		ID:             idgen.NewV7(),
+		ID:             common.NewV7(),
 		ConversationID: convID,
 		Role:           entity.RoleAssistant,
 		Content:        &assistantContent,
@@ -154,7 +159,7 @@ func (uc *chatUsecase) processAttachments(ctx context.Context, messageID, userID
 
 		// Create attachment record
 		attachment := &entity.MessageAttachment{
-			ID:         idgen.NewV7(),
+			ID:         common.NewV7(),
 			MessageID:  messageID,
 			Filename:   common.SanitizeFilename(fileInfo.FileHeader.Filename),
 			StorageKey: finalStorageKey,

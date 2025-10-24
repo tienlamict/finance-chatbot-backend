@@ -58,8 +58,8 @@ func (Message) TableName() string { return "messages" }
 type SendMessageRequest struct {
 	ConversationID string `json:"conversation_id"` // nếu rỗng -> tạo mới
 	Content        string `json:"content" binding:"required"`
-	// Nếu hệ thống đã có middleware auth set user vào context thì có thể bỏ UserID.
-	// Ở đây hỗ trợ cả 2: đọc từ context, nếu không có thì dùng UserID từ body.
+	// UserID is ignored in favor of the authenticated user ID from the JWT token.
+	// This field is kept for backward compatibility but will be overridden by the auth context.
 	UserID string `json:"user_id"`
 	// Optional: OrgID, Title lần đầu tạo conv
 	OrgID *string `json:"org_id,omitempty"`
