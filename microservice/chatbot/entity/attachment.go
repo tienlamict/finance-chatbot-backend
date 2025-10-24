@@ -13,7 +13,7 @@ type MessageAttachment struct {
 	MessageID  string         `gorm:"column:message_id;type:char(36);index:idx_att_msg" json:"message_id"`
 	Filename   string         `gorm:"column:filename;type:varchar(255)" json:"filename"`
 	StorageKey string         `gorm:"column:storage_key;type:varchar(512)" json:"storage_key"`
-	MimeType   *string        `gorm:"column:mime_type;type:varchar(64)" json:"mime_type,omitempty"`
+	MimeType   *string        `gorm:"column:mime_type;type:varchar(255)" json:"mime_type,omitempty"`
 	SHA256     *string        `gorm:"column:sha256;type:char(64);index:idx_att_sha" json:"sha256,omitempty"`
 	Pages      *int           `gorm:"column:pages" json:"pages,omitempty"`
 	Meta       datatypes.JSON `gorm:"column:meta;type:json" json:"meta,omitempty"`

@@ -5,6 +5,7 @@ import (
 	"finance-chatbot/addon/common"
 	"finance-chatbot/addon/core"
 	"finance-chatbot/microservice/auth/entity"
+	userEntity "finance-chatbot/microservice/user/entity"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -19,6 +20,10 @@ type UserRepository interface {
 	CreateUser(ctx context.Context, firstName, lastName, email string) (newId int, err error)
 }
 
+type RBACBusiness interface {
+	AssignRolesToUser(ctx context.Context, userID int, req *userEntity.AssignRolesRequest) error
+}
+
 type Hasher interface {
 	RandomStr(length int) (string, error)
 	HashPassword(salt, password string) (string, error)
@@ -28,15 +33,17 @@ type Hasher interface {
 type business struct {
 	repository     AuthRepository
 	userRepository UserRepository
+	rbacBusiness   RBACBusiness
 	jwtProvider    common.JWTProvider
 	hasher         Hasher
 }
 
 func NewBusiness(repository AuthRepository, userRepository UserRepository,
-	jwtProvider common.JWTProvider, hasher Hasher) *business {
+	rbacBusiness RBACBusiness, jwtProvider common.JWTProvider, hasher Hasher) *business {
 	return &business{
 		repository:     repository,
 		userRepository: userRepository,
+		rbacBusiness:   rbacBusiness,
 		jwtProvider:    jwtProvider,
 		hasher:         hasher,
 	}
@@ -110,6 +117,17 @@ func (biz *business) Register(ctx context.Context, data *entity.AuthRegister) er
 
 	if err := biz.repository.AddNewAuth(ctx, &newAuth); err != nil {
 		return core.ErrInternalServerError.WithError(entity.ErrCannotRegister.Error()).WithDebug(err.Error())
+	}
+
+	// Assign default role (role_id = 3) to the new user
+	assignRolesReq := &userEntity.AssignRolesRequest{
+		RoleIDs: []int{3}, // Default role for regular users
+	}
+
+	if err := biz.rbacBusiness.AssignRolesToUser(ctx, newUserId, assignRolesReq); err != nil {
+		// Log the error but don't fail the registration since user is already created
+		// In production, you might want to handle this differently (e.g., retry or rollback)
+		return core.ErrInternalServerError.WithError("User registered but failed to assign default role").WithDebug(err.Error())
 	}
 
 	return nil

@@ -93,7 +93,7 @@ CREATE TABLE message_attachments (
   `message_id`    CHAR(36) NOT NULL,
   `filename`      VARCHAR(255) NOT NULL,
   `storage_key`   VARCHAR(512) NOT NULL,                -- S3/MinIO path
-  `mime_type`     VARCHAR(64)  NULL,
+  `mime_type`     VARCHAR(255)  NULL,
   `sha256`        CHAR(64) NULL,
   `pages`         INT NULL,                              -- nếu PDF
   `meta`          JSON NULL,

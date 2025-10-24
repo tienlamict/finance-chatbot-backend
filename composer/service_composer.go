@@ -96,8 +96,12 @@ func ComposeAuthAPIService(serviceCtx sctx.ServiceContext) AuthService {
 	authRepo := authSQLRepository.NewMySQLRepository(db.GetDB())
 	hasher := new(common.Hasher)
 
+	// Create RBAC business for role assignment
+	rbacStore := userSQLRepository.NewRBACStore(db.GetDB())
+	rbacBiz := userBusiness.NewRBACBusiness(rbacStore)
+
 	userClient := authUserRPC.NewClient(composeUserRPCClient(serviceCtx))
-	biz := authBusiness.NewBusiness(authRepo, userClient, jwtComp, hasher)
+	biz := authBusiness.NewBusiness(authRepo, userClient, rbacBiz, jwtComp, hasher)
 	serviceAPI := authAPI.NewAPI(serviceCtx, biz)
 
 	return serviceAPI
@@ -182,8 +186,12 @@ func ComposeAuthGRPCService(serviceCtx sctx.ServiceContext) pb.AuthServiceServer
 	authRepo := authSQLRepository.NewMySQLRepository(db.GetDB())
 	hasher := new(common.Hasher)
 
+	// Create RBAC business for role assignment
+	rbacStore := userSQLRepository.NewRBACStore(db.GetDB())
+	rbacBiz := userBusiness.NewRBACBusiness(rbacStore)
+
 	// In Auth GRPC service, user repository is unnecessary
-	biz := authBusiness.NewBusiness(authRepo, nil, jwtComp, hasher)
+	biz := authBusiness.NewBusiness(authRepo, nil, rbacBiz, jwtComp, hasher)
 	authService := authRPC.NewService(biz)
 
 	return authService
