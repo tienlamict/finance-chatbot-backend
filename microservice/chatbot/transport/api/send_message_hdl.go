@@ -51,6 +51,11 @@ func (a *API) SendMessageHandler() func(*gin.Context) {
 			}
 		}
 
+		// Support conversation_id as query parameter (overrides body if present)
+		if conversationID := c.Query("conversation_id"); conversationID != "" {
+			req.ConversationID = conversationID
+		}
+
 		userID := a.resolveUserID(c, req.UserID)
 		// UserID is now extracted from authentication context
 		if userID == "" {
@@ -60,6 +65,15 @@ func (a *API) SendMessageHandler() func(*gin.Context) {
 
 		res, err := a.uc.SendMessage(c.Request.Context(), req, userID)
 		if err != nil {
+			// Handle different types of errors with appropriate HTTP status codes
+			if err.Error() == "conversation not found or access denied" {
+				c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+				return
+			}
+			if err.Error() == "user ID is required to create a new conversation" {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

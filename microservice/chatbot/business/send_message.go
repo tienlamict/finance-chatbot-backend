@@ -13,11 +13,15 @@ import (
 
 func (uc *chatUsecase) ensureConversation(ctx context.Context, req entity.SendMessageRequest, userID string) (string, error) {
 	if req.ConversationID != "" {
-		// Đảm bảo conv tồn tại
-		if _, err := uc.sql.FindByID(ctx, req.ConversationID); err == nil {
-			return req.ConversationID, nil
+		// Validate that the conversation exists and belongs to the authenticated user
+		hasAccess, err := uc.sql.CheckConversationAccess(ctx, req.ConversationID, userID)
+		if err != nil {
+			return "", fmt.Errorf("failed to check conversation access: %w", err)
 		}
-		// Nếu không tìm thấy thì fallback tạo mới
+		if !hasAccess {
+			return "", fmt.Errorf("conversation not found or access denied")
+		}
+		return req.ConversationID, nil
 	}
 
 	// Validate userID is not empty when creating new conversation
