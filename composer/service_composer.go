@@ -197,16 +197,16 @@ func ComposeAuthGRPCService(serviceCtx sctx.ServiceContext) pb.AuthServiceServer
 	return authService
 }
 
-// Chọn AI client theo ENV: AI_PROTOCOL=rest|grpc (mặc định grpc)
+// Chọn AI client theo ENV: AI_PROTOCOL=rest|grpc (mặc định rest)
 func chooseAIClient(serviceCtx sctx.ServiceContext) chatrpc.AIClient {
 	switch os.Getenv("AI_PROTOCOL") {
-	case "rest", "REST":
-		return composeAIRESTClient() // <--- REST adapter mới
+	case "mock", "MOCK":
+		return NewAIMockClient() // mock for testing
 	// case "grpc":
 	// 	aiGrpc := composeAIRPCClient(serviceCtx)      // <--- gRPC cũ (đã có)
 	// 	return NewAIClientAdapter(aiGrpc)
 	default:
-		return NewAIMockClient() // mock
+		return composeAIRESTClient() // <--- REST adapter - default for production
 	}
 }
 

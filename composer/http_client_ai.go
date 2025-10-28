@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	aiclient "finance-chatbot/microservice/chatbot/repository/rpc"
@@ -22,7 +23,7 @@ import (
 // AI_REST_TIMEOUT=5s (optional; ví dụ "3s", "10s")
 
 func composeAIRESTClient() aiclient.AIClient {
-	baseURL := getenv("AI_REST_BASE_URL", "http://ai:8080")
+	baseURL := getenv("AI_REST_BASE_URL", "http://localhost:8000")
 	apiKey := getenv("AI_REST_API_KEY", "")
 	timeoutStr := getenv("AI_REST_TIMEOUT", "5s")
 	timeout, err := time.ParseDuration(timeoutStr)
@@ -64,22 +65,30 @@ func NewAIRESTClientAdapter(baseURL, apiKey string, httpClient *http.Client) aic
 	}
 }
 
-// Generate gọi REST: POST {baseURL}/v1/generate
-// Request JSON: { "user_id", "conversation_id", "prompt" }
+// Generate gọi REST: POST {baseURL}/chat
+// Request JSON: { "message", "query_type", "priority" }
 // Response JSON: { "content", "model", "tokens_input", "tokens_output" }
 func (a *aiRESTClientAdapter) Generate(ctx context.Context, userID, conversationID, prompt string) (*aiclient.AIResult, error) {
+	// Determine query type based on prompt content
+	queryType := "general"
+	if containsKeywords(prompt, []string{"cổ phiếu", "chứng khoán", "VIC", "VNM", "stock"}) {
+		queryType = "stock_research"
+	} else if containsKeywords(prompt, []string{"phân tích", "analyze"}) {
+		queryType = "analysis"
+	}
+
 	reqBody := struct {
-		UserID         string `json:"user_id"`
-		ConversationID string `json:"conversation_id"`
-		Prompt         string `json:"prompt"`
+		Message   string `json:"message"`
+		QueryType string `json:"query_type"`
+		Priority  string `json:"priority"`
 	}{
-		UserID:         userID,
-		ConversationID: conversationID,
-		Prompt:         prompt,
+		Message:   prompt,
+		QueryType: queryType,
+		Priority:  "HIGH",
 	}
 
 	b, _ := json.Marshal(reqBody)
-	url := a.baseURL + "/v1/generate"
+	url := a.baseURL + "/chat"
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(b))
 	if err != nil {
@@ -141,4 +150,15 @@ func trimRightSlash(s string) string {
 		s = s[:len(s)-1]
 	}
 	return s
+}
+
+// containsKeywords checks if the text contains any of the provided keywords (case-insensitive)
+func containsKeywords(text string, keywords []string) bool {
+	textLower := strings.ToLower(text)
+	for _, keyword := range keywords {
+		if strings.Contains(textLower, strings.ToLower(keyword)) {
+			return true
+		}
+	}
+	return false
 }

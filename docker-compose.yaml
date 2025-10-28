@@ -13,7 +13,7 @@ services:
       JWT_SECRET: "very-important-please-change-it!"
       GIN_PORT: "3001"
       GRPC_PORT: "3300"
-      AI_PROTOCOL: = "mock"  # mock | grpc | rest
+      AI_PROTOCOL: = "rest"  # mock | grpc | rest
       # CORS Configuration
       CORS_ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001,http://localhost:8080,http://localhost:4200,http://localhost:5173"
       # MinIO/S3 Storage Configuration
