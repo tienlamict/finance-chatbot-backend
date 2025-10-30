@@ -64,6 +64,8 @@ type SendMessageRequest struct {
 	// Optional: OrgID, Title lần đầu tạo conv
 	OrgID *string `json:"org_id,omitempty"`
 	Title *string `json:"title,omitempty"`
+	// DeepResearch enables expensive AI operations (analysis, multi-step reasoning)
+	DeepResearch bool `json:"deep_research,omitempty"`
 	// Files uploaded with the message (populated in transport layer)
 	Files []FileUploadInfo `json:"-"`
 }

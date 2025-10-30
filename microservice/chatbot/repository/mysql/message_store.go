@@ -17,6 +17,9 @@ type MessageStore interface {
 	CountConversationHistory(ctx context.Context, req entity.ConversationHistoryRequest) (int64, error)
 	GetMessageByID(ctx context.Context, messageID string) (*entity.Message, error)
 	GetMessagesWithAttachments(ctx context.Context, messageIDs []string) ([]entity.MessageWithAttachments, error)
+
+	// GetRecentMessagesForAI retrieves the last N turns (user+assistant pairs) for AI context
+	GetRecentMessagesForAI(ctx context.Context, conversationID string, maxTurns int) ([]entity.Message, error)
 }
 
 func (r *MySQLRepo) CreateMessage(ctx context.Context, msg *entity.Message) error {
@@ -190,4 +193,36 @@ func (r *MySQLRepo) getAttachmentsForMessage(ctx context.Context, messageID stri
 	}
 
 	return result, nil
+}
+
+// GetRecentMessagesForAI retrieves the most recent messages for AI context
+// Returns messages in chronological order (oldest first)
+// maxTurns specifies the maximum number of conversation turns to retrieve
+func (r *MySQLRepo) GetRecentMessagesForAI(ctx context.Context, conversationID string, maxTurns int) ([]entity.Message, error) {
+	if maxTurns <= 0 {
+		return []entity.Message{}, nil
+	}
+
+	// Fetch messages ordered by created_at descending (most recent first)
+	// We fetch maxTurns * 2 to account for user+assistant pairs
+	limit := maxTurns * 2
+
+	var messages []entity.Message
+	err := r.db.WithContext(ctx).
+		Where("conversation_id = ?", conversationID).
+		Where("error_code IS NULL"). // Exclude error messages
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&messages).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Reverse to get chronological order (oldest first)
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
+	return messages, nil
 }

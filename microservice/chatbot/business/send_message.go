@@ -9,6 +9,7 @@ import (
 	"finance-chatbot/addon/common"
 	minioc "finance-chatbot/addon/component/minioc"
 	"finance-chatbot/microservice/chatbot/entity"
+	aiclient "finance-chatbot/microservice/chatbot/repository/rpc"
 )
 
 func (uc *chatUsecase) ensureConversation(ctx context.Context, req entity.SendMessageRequest, userID string) (string, error) {
@@ -74,12 +75,12 @@ func (uc *chatUsecase) SendMessage(ctx context.Context, req entity.SendMessageRe
 		}
 	}
 
-	// 2) Gọi AI service
+	// 2) Call AI service with full context (history + attachments)
 	start := time.Now()
-	aiRes, err := uc.ai.Generate(ctx, userID, convID, req.Content)
+	aiRes, err := uc.callAIWithContext(ctx, userID, convID, req.Content, req.DeepResearch)
 	latency := int(time.Since(start).Milliseconds())
 	if err != nil {
-		// Lưu 1 message assistant báo lỗi (optional)
+		// Save assistant message with error code
 		errCode := "ai_generate_error"
 		msg := &entity.Message{
 			ID:             common.NewV7(),
@@ -141,6 +142,174 @@ func (uc *chatUsecase) SendMessage(ctx context.Context, req entity.SendMessageRe
 		AIMessageCreatedAt:   assistantMsg.CreatedAt,
 		Attachments:          attachmentDTOs,
 	}, nil
+}
+
+// callAIWithContext calls the AI service with conversation history and attachments
+func (uc *chatUsecase) callAIWithContext(ctx context.Context, userID, conversationID, prompt string, deepResearch bool) (*aiclient.AIResult, error) {
+	// Check if AI client supports enhanced context
+	enhancedClient, isEnhanced := uc.ai.(aiclient.EnhancedAIClient)
+	if !isEnhanced {
+		// Fallback to basic Generate method
+		return uc.ai.Generate(ctx, userID, conversationID, prompt)
+	}
+
+	// Fetch conversation history for AI context
+	history, err := uc.buildConversationHistory(ctx, conversationID, enhancedClient.GetHistoryMaxTurns())
+	if err != nil {
+		// Log warning but continue without history
+		fmt.Printf("[WARN] Failed to fetch conversation history: %v\n", err)
+		history = []aiclient.HistoryItem{}
+	}
+
+	// Build attachment references with presigned URLs
+	attachFiles, err := uc.buildAttachmentReferences(ctx, conversationID, enhancedClient.GetPresignedExpirySec())
+	if err != nil {
+		// Log warning but continue without attachments
+		fmt.Printf("[WARN] Failed to build attachment references: %v\n", err)
+		attachFiles = []aiclient.AttachFile{}
+	}
+
+	// Call AI with full context
+	return enhancedClient.GenerateWithContext(ctx, userID, conversationID, prompt, history, deepResearch, attachFiles)
+}
+
+// buildConversationHistory fetches recent messages and converts them to HistoryItem format
+func (uc *chatUsecase) buildConversationHistory(ctx context.Context, conversationID string, maxTurns int) ([]aiclient.HistoryItem, error) {
+	if maxTurns <= 0 {
+		return []aiclient.HistoryItem{}, nil
+	}
+
+	// Fetch recent messages from DB
+	messages, err := uc.sql.GetRecentMessagesForAI(ctx, conversationID, maxTurns)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to HistoryItem format
+	history := make([]aiclient.HistoryItem, 0, len(messages))
+	for _, msg := range messages {
+		// Skip messages without content
+		if msg.Content == nil || *msg.Content == "" {
+			continue
+		}
+
+		// Map role
+		role := string(msg.Role)
+		if role != "user" && role != "assistant" {
+			continue // Skip other roles (e.g., "tool")
+		}
+
+		history = append(history, aiclient.HistoryItem{
+			Role:      role,
+			Message:   *msg.Content,
+			CreatedAt: msg.CreatedAt.Format(time.RFC3339),
+		})
+	}
+
+	return history, nil
+}
+
+// buildAttachmentReferences generates presigned URLs for recent attachments in the conversation
+func (uc *chatUsecase) buildAttachmentReferences(ctx context.Context, conversationID string, expirySec int) ([]aiclient.AttachFile, error) {
+	if uc.storage == nil {
+		return []aiclient.AttachFile{}, nil
+	}
+
+	// Fetch recent messages to find their attachments
+	// We'll look at the last few messages (e.g., last 10 messages)
+	messages, err := uc.sql.ListByConversation(ctx, conversationID, 10, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var attachFiles []aiclient.AttachFile
+
+	// Process attachments from recent messages
+	for _, msg := range messages {
+		if msg.Role != entity.RoleUser {
+			continue // Only look at user messages for attachments
+		}
+
+		// Get attachments for this message
+		attachments, err := uc.sql.GetAttachmentsByMessageID(ctx, msg.ID)
+		if err != nil || len(attachments) == 0 {
+			continue
+		}
+
+		// Generate presigned URLs for each attachment
+		for _, att := range attachments {
+			// Extract object name from storage key (format: bucket/path)
+			objectName := extractObjectName(att.StorageKey)
+
+			// Generate presigned URL
+			expiry := time.Duration(expirySec) * time.Second
+			presignedURL, err := uc.storage.GetPresignedURL(ctx, objectName, expiry)
+			if err != nil {
+				fmt.Printf("[WARN] Failed to generate presigned URL for %s: %v\n", att.Filename, err)
+				continue
+			}
+
+			// Build AttachFile
+			attachFile := aiclient.AttachFile{
+				URL:      presignedURL,
+				Filename: att.Filename,
+			}
+			if att.MimeType != nil {
+				attachFile.MimeType = *att.MimeType
+			}
+			if att.SHA256 != nil {
+				attachFile.SHA256 = *att.SHA256
+			}
+			if att.Pages != nil {
+				attachFile.Pages = att.Pages
+			}
+
+			attachFiles = append(attachFiles, attachFile)
+		}
+	}
+
+	return attachFiles, nil
+}
+
+// extractObjectName extracts the object name from a storage key (format: bucket/path)
+func extractObjectName(storageKey string) string {
+	// Storage key format: "bucket-name/path/to/file.ext"
+	// We need to extract "path/to/file.ext"
+	parts := splitStorageKey(storageKey)
+	if len(parts) > 1 {
+		return joinPath(parts[1:])
+	}
+	return storageKey
+}
+
+// splitStorageKey splits a storage key by '/'
+func splitStorageKey(key string) []string {
+	result := []string{}
+	start := 0
+	for i := 0; i < len(key); i++ {
+		if key[i] == '/' {
+			if i > start {
+				result = append(result, key[start:i])
+			}
+			start = i + 1
+		}
+	}
+	if start < len(key) {
+		result = append(result, key[start:])
+	}
+	return result
+}
+
+// joinPath joins path segments with '/'
+func joinPath(parts []string) string {
+	if len(parts) == 0 {
+		return ""
+	}
+	result := parts[0]
+	for i := 1; i < len(parts); i++ {
+		result += "/" + parts[i]
+	}
+	return result
 }
 
 // processAttachments handles file uploads and creates attachment records

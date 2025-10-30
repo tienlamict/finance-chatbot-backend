@@ -3,6 +3,7 @@ package business
 
 import (
 	"context"
+	"time"
 
 	"finance-chatbot/microservice/chatbot/entity"
 	mysqlrepo "finance-chatbot/microservice/chatbot/repository/mysql"
@@ -33,6 +34,7 @@ type StorageProvider interface {
 	UploadFile(ctx context.Context, objectName string, data []byte, contentType string) (string, error)
 	DownloadFile(ctx context.Context, objectName string) ([]byte, error)
 	DeleteFile(ctx context.Context, objectName string) error
+	GetPresignedURL(ctx context.Context, objectName string, expires time.Duration) (string, error)
 }
 
 func NewChatBusiness(sqlRepo *mysqlrepo.MySQLRepo, aiClient rpcrepo.AIClient, storage StorageProvider) ChatUsecase {
