@@ -169,8 +169,16 @@ func (uc *chatUsecase) callAIWithContext(ctx context.Context, userID, conversati
 		attachFiles = []aiclient.AttachFile{}
 	}
 
-	// Call AI with full context
-	return enhancedClient.GenerateWithContext(ctx, userID, conversationID, prompt, history, deepResearch, attachFiles)
+	// Build RAG context if enabled
+	ragDocs, err := uc.buildRAGContext(ctx, prompt)
+	if err != nil {
+		// Log warning but continue without RAG
+		fmt.Printf("[WARN] Failed to build RAG context: %v\n", err)
+		ragDocs = []aiclient.RAGContextSnippet{}
+	}
+
+	// Call AI with full context (history + attachments + RAG)
+	return enhancedClient.GenerateWithContext(ctx, userID, conversationID, prompt, history, deepResearch, attachFiles, ragDocs)
 }
 
 // buildConversationHistory fetches recent messages and converts them to HistoryItem format

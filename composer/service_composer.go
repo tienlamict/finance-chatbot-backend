@@ -21,6 +21,11 @@ import (
 	chatrpc "finance-chatbot/microservice/chatbot/repository/rpc"
 	chatAPI "finance-chatbot/microservice/chatbot/transport/api"
 
+	ragBusiness "finance-chatbot/microservice/rag/business"
+	ragmysql "finance-chatbot/microservice/rag/repository/mysql"
+	ragrpc "finance-chatbot/microservice/rag/repository/rpc"
+	ragAPI "finance-chatbot/microservice/rag/transport/api"
+
 	"github.com/gin-gonic/gin"
 
 	"finance-chatbot/proto/pb"
@@ -77,6 +82,10 @@ type AdminUserService interface {
 	DeleteUserHdl() func(*gin.Context)
 	ListUsersHdl() func(*gin.Context)
 	GetUserByIDHdl() func(*gin.Context)
+}
+
+type RAGService interface {
+	RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.HandlerFunc)
 }
 
 func ComposeUserAPIService(serviceCtx sctx.ServiceContext) UserService {
@@ -229,4 +238,59 @@ func ComposeChatbotAPIService(serviceCtx sctx.ServiceContext) ChatbotService {
 	biz := chatBusiness.NewChatBusiness(sqlRepo, aiClient, storage)
 	api := chatAPI.NewAPI(biz)
 	return api
+}
+
+// ComposeRAGAPIService creates RAG service with all dependencies
+func ComposeRAGAPIService(serviceCtx sctx.ServiceContext) RAGService {
+	dbComp := serviceCtx.MustGet(common.KeyCompMySQL).(common.GormComponent)
+	gormDB := dbComp.GetDB()
+
+	// Get storage component (MinIO/S3)
+	var storage common.StorageProvider
+	if storageComp, ok := serviceCtx.Get(common.KeyCompStorage); ok {
+		storage = storageComp.(common.StorageProvider)
+	} else {
+		logger := serviceCtx.Logger("rag")
+		logger.Warn("MinIO storage not configured - RAG upload operations will fail")
+	}
+
+	// Get RAG configuration from environment
+	ragConfig := ragrpc.Config{
+		BaseURL:          getEnvOrDefault("RAG_BASE_URL", "http://host.docker.internal:8082"),
+		UploadTimeoutSec: getEnvIntOrDefault("RAG_UPLOAD_TIMEOUT_SEC", 60),
+		QueryTimeoutSec:  getEnvIntOrDefault("RAG_QUERY_TIMEOUT_SEC", 15),
+		UploadRetries:    getEnvIntOrDefault("RAG_UPLOAD_RETRIES", 2),
+		QueryRetries:     getEnvIntOrDefault("RAG_QUERY_RETRIES", 1),
+	}
+
+	ragClient := ragrpc.NewRAGClient(ragConfig)
+	ragRepo := ragmysql.NewRAGRepository(gormDB)
+	tempDir := getEnvOrDefault("RAG_TEMP_DIR", "")
+
+	biz := ragBusiness.NewRAGBusiness(ragRepo, ragClient, storage, tempDir)
+	api := ragAPI.NewRAGHandler(biz)
+
+	return api
+}
+
+// Helper functions for environment variables
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+func getEnvIntOrDefault(key string, defaultValue int) int {
+	if value := os.Getenv(key); value != "" {
+		var result int
+		for i := 0; i < len(value); i++ {
+			if value[i] < '0' || value[i] > '9' {
+				return defaultValue
+			}
+			result = result*10 + int(value[i]-'0')
+		}
+		return result
+	}
+	return defaultValue
 }

@@ -72,8 +72,11 @@ var rootCmd = &cobra.Command{
 		go StartGRPCServices(serviceCtx)
 
 		v1 := router.Group("/v1")
-
 		SetupRoutes(v1, serviceCtx)
+
+		// Also register RAG routes under /api for compatibility with external RAG service expectations
+		api := router.Group("/api")
+		SetupRAGRoutes(api, serviceCtx)
 
 		if err := router.Run(fmt.Sprintf(":%d", ginComp.GetPort())); err != nil {
 			logger.Fatal(err)
@@ -88,6 +91,7 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 	chatbotAPIService := composer.ComposeChatbotAPIService(serviceCtx)
 	rbacAPIService := composer.ComposeRBACAPIService(serviceCtx)
 	adminUserAPIService := composer.ComposeAdminUserAPIService(serviceCtx)
+	ragAPIService := composer.ComposeRAGAPIService(serviceCtx)
 
 	requireAuthMdw := middleware.RequireAuth(composer.ComposeAuthRPCClient(serviceCtx))
 	rbacClient := composer.ComposeRBACClient(serviceCtx)
@@ -146,6 +150,17 @@ func SetupRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
 		rbac.GET("/user-roles/:userId", rbacAPIService.GetUserRolesHdl())
 		rbac.DELETE("/user-roles/:userId/:roleId", rbacAPIService.RemoveRoleFromUserHdl())
 	}
+
+	// RAG Document Management
+	// Note: Authentication applied selectively - upload/delete require auth, query is optional
+	ragAPIService.RegisterRoutes(router, requireAuthMdw)
+}
+
+// SetupRAGRoutes sets up RAG routes under /api prefix for external API compatibility
+func SetupRAGRoutes(router *gin.RouterGroup, serviceCtx sctx.ServiceContext) {
+	ragAPIService := composer.ComposeRAGAPIService(serviceCtx)
+	requireAuthMdw := middleware.RequireAuth(composer.ComposeAuthRPCClient(serviceCtx))
+	ragAPIService.RegisterRoutes(router, requireAuthMdw)
 }
 
 func StartGRPCServices(serviceCtx sctx.ServiceContext) {

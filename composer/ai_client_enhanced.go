@@ -23,10 +23,11 @@ import (
 
 // AIRequestContext contains contextual information for the AI request
 type AIRequestContext struct {
-	History      []aiclient.HistoryItem `json:"history"`       // Conversation history
-	HistoryCount int                    `json:"history_count"` // Max history turns configured
-	DeepResearch bool                   `json:"deep_research"` // Enable expensive operations
-	AttachFiles  []aiclient.AttachFile  `json:"attach_files"`  // File attachments with presigned URLs
+	History      []aiclient.HistoryItem       `json:"history"`       // Conversation history
+	HistoryCount int                          `json:"history_count"` // Max history turns configured
+	DeepResearch bool                         `json:"deep_research"` // Enable expensive operations
+	AttachFiles  []aiclient.AttachFile        `json:"attach_files"`  // File attachments with presigned URLs
+	RAGDocuments []aiclient.RAGContextSnippet `json:"rag_documents"` // RAG retrieved documents
 }
 
 // AIRequest is the full request payload sent to the AI service
@@ -58,7 +59,7 @@ type SelectedAgent struct {
 	AgentType       string   `json:"agent_type"`
 	ConfidenceScore float64  `json:"confidence_score"`
 	Reasoning       string   `json:"reasoning"`
-	ExecutionTime   string   `json:"execution_time"`
+	ExecutionTime   float64  `json:"execution_time"`
 	ToolsUsed       []string `json:"tools_used"`
 }
 
@@ -84,7 +85,7 @@ type enhancedAIClient struct {
 func NewEnhancedAIClient() aiclient.EnhancedAIClient {
 	baseURL := getenv("AI_SERVICE_URL", "http://host.docker.internal:8000")
 	apiKey := getenv("AI_REST_API_KEY", "")
-	timeoutStr := getenv("AI_REST_TIMEOUT", "30s")
+	timeoutStr := getenv("AI_REST_TIMEOUT", "90s")
 
 	timeout, err := time.ParseDuration(timeoutStr)
 	if err != nil {
@@ -141,13 +142,14 @@ func (c *enhancedAIClient) Generate(ctx context.Context, userID, conversationID,
 			HistoryCount: c.historyMaxTurns,
 			DeepResearch: false,
 			AttachFiles:  []aiclient.AttachFile{},
+			RAGDocuments: []aiclient.RAGContextSnippet{},
 		},
 	}
 
 	return c.sendRequest(ctx, req)
 }
 
-// GenerateWithContext sends a request with full context (history + attachments)
+// GenerateWithContext sends a request with full context (history + attachments + RAG)
 // This is an extended method that provides the full functionality
 func (c *enhancedAIClient) GenerateWithContext(
 	ctx context.Context,
@@ -155,6 +157,7 @@ func (c *enhancedAIClient) GenerateWithContext(
 	history []aiclient.HistoryItem,
 	deepResearch bool,
 	attachFiles []aiclient.AttachFile,
+	ragDocs []aiclient.RAGContextSnippet,
 ) (*aiclient.AIResult, error) {
 	// Limit history to configured max turns
 	limitedHistory := history
@@ -171,9 +174,9 @@ func (c *enhancedAIClient) GenerateWithContext(
 			HistoryCount: c.historyMaxTurns,
 			DeepResearch: deepResearch,
 			AttachFiles:  attachFiles,
+			RAGDocuments: ragDocs,
 		},
 	}
-
 	return c.sendRequest(ctx, req)
 }
 
@@ -184,6 +187,9 @@ func (c *enhancedAIClient) sendRequest(ctx context.Context, req AIRequest) (*aic
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal AI request: %w", err)
 	}
+
+	// Log the actual JSON being sent (for debugging)
+	fmt.Printf("AI Request JSON: %s\n", string(reqBody))
 
 	// Log request metadata (avoid logging full presigned URLs)
 	logAIRequest(req.SessionID, req.UserID, len(req.Context.History), len(req.Context.AttachFiles))

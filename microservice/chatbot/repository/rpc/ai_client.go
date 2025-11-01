@@ -29,6 +29,16 @@ type AttachFile struct {
 	Pages    *int   `json:"pages,omitempty"` // For PDF files
 }
 
+// RAGContextSnippet represents a RAG document snippet for AI context
+type RAGContextSnippet struct {
+	Source     string  `json:"source"`
+	Title      string  `json:"title"`
+	Page       int     `json:"page"`
+	Score      float64 `json:"score"`
+	Text       string  `json:"text"`
+	DocumentID string  `json:"document_id"`
+}
+
 // AIClient là abstraction để business không phụ thuộc trực tiếp protobuf
 // Composer sẽ cung cấp implementation cụ thể (gRPC chẳng hạn).
 type AIClient interface {
@@ -44,6 +54,7 @@ type EnhancedAIClient interface {
 		history []HistoryItem,
 		deepResearch bool,
 		attachFiles []AttachFile,
+		ragDocs []RAGContextSnippet,
 	) (*AIResult, error)
 	GetHistoryMaxTurns() int
 	GetPresignedExpirySec() int
