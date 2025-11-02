@@ -85,7 +85,7 @@ type enhancedAIClient struct {
 func NewEnhancedAIClient() aiclient.EnhancedAIClient {
 	baseURL := getenv("AI_SERVICE_URL", "http://host.docker.internal:8000")
 	apiKey := getenv("AI_REST_API_KEY", "")
-	timeoutStr := getenv("AI_REST_TIMEOUT", "90s")
+	timeoutStr := getenv("AI_REST_TIMEOUT", "300s")
 
 	timeout, err := time.ParseDuration(timeoutStr)
 	if err != nil {
